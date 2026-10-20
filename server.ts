@@ -12,7 +12,29 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Security Hardening: Disable Express fingerprinting and set defensive HTTP headers
+app.disable('x-powered-by');
+
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 app.use(express.json({ limit: '2mb' }));
+
+// Defensive Sanitization Helper against HTML Injection
+function escapeHtml(value: any): string {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 const SYSTEM_INSTRUCTION = `Eres "Risknet AI Advisor", el asistente virtual especializado en Gobierno, Riesgo y Cumplimiento (GRC), Ciberseguridad Defensiva y Resiliencia Operativa de la firma Risknet (operada por Weltcomm LLC).
 
@@ -191,19 +213,35 @@ app.post('/api/workspace/sync-booking', async (req: Request, res: Response) => {
       const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (userInfoRes.ok) {
-        const userInfo = await userInfoRes.json();
-        const tokenEmail = (userInfo.email || '').toLowerCase();
-        if (tokenEmail && !AUTHORIZED_ADMIN_EMAILS.includes(tokenEmail)) {
-          console.warn(`[SECURITY] Blocked unauthorized Google account from sync: ${tokenEmail}`);
-          return res.status(403).json({
-            error: `Acceso restringido: La cuenta Google (${tokenEmail}) no está autorizada para administrar o sincronizar datos de Risknet.`,
-          });
-        }
+      if (!userInfoRes.ok) {
+        return res.status(401).json({ error: 'Token de Google Workspace inválido o expirado.' });
+      }
+      const userInfo = await userInfoRes.json();
+      const tokenEmail = (userInfo.email || '').toLowerCase();
+      if (!tokenEmail || !AUTHORIZED_ADMIN_EMAILS.includes(tokenEmail)) {
+        console.warn(`[SECURITY] Blocked unauthorized Google account from sync: ${tokenEmail}`);
+        return res.status(403).json({
+          error: `Acceso restringido: La cuenta Google (${tokenEmail || 'desconocida'}) no está autorizada para administrar o sincronizar datos de Risknet.`,
+        });
       }
     } catch (vErr) {
       console.warn('Could not verify Google token userinfo:', vErr);
+      return res.status(500).json({ error: 'Error al verificar credenciales con Google.' });
     }
+
+    // Defensive Sanitization: Escaped fields to prevent HTML injection in emails
+    const safeBooking = {
+      refCode: escapeHtml(booking.refCode),
+      timestamp: escapeHtml(booking.timestamp || new Date().toLocaleString('es-CO')),
+      name: escapeHtml(booking.name),
+      org: escapeHtml(booking.org),
+      email: escapeHtml(booking.email),
+      phone: escapeHtml(booking.phone),
+      size: escapeHtml(booking.size),
+      standard: escapeHtml(booking.standard),
+      msg: escapeHtml(booking.msg || 'No especificado'),
+      hash: escapeHtml(booking.hash || 'SHA256: VALIDATED'),
+    };
 
     let spreadsheetId = booking.spreadsheetId || null;
     let spreadsheetUrl = '';
@@ -356,20 +394,20 @@ app.post('/api/workspace/sync-booking', async (req: Request, res: Response) => {
           </div>
 
           <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 20px; font-size: 13px;">
-            <strong>Estimado/a ${booking.name},</strong><br><br>
-            Hemos registrado exitosamente la solicitud de diagnóstico técnico para <strong>${booking.org}</strong>.
+            <strong>Estimado/a ${safeBooking.name},</strong><br><br>
+            Hemos registrado exitosamente la solicitud de diagnóstico técnico para <strong>${safeBooking.org}</strong>.
             <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-family: monospace; font-size: 12px;">
-              <strong>FOLIO DE ATENCIÓN:</strong> <span style="color: #0284c7; font-weight: bold;">${booking.refCode}</span><br>
-              <strong>ESTÁNDAR SELECCIONADO:</strong> ${booking.standard}<br>
+              <strong>FOLIO DE ATENCIÓN:</strong> <span style="color: #0284c7; font-weight: bold;">${safeBooking.refCode}</span><br>
+              <strong>ESTÁNDAR SELECCIONADO:</strong> ${safeBooking.standard}<br>
               <strong>ESTADO DEL ACUERDO:</strong> <span style="color: #16a34a; font-weight: bold;">NDA Bilateral Formalizado y Vigente (3 años)</span><br>
-              <strong>SELLO CRIPTOGRÁFICO:</strong> ${booking.hash || 'SHA256 VALIDATED'}
+              <strong>SELLO CRIPTOGRÁFICO:</strong> ${safeBooking.hash}
             </div>
           </div>
 
           <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase;">Próximos Pasos:</h3>
           <ul style="font-size: 13px; color: #334155; line-height: 1.6; padding-left: 20px;">
             <li>Nuestro equipo técnico asignado bajo la dirección de <strong>Alejandro Urbina (CISO)</strong> revisará el alcance preliminar.</li>
-            <li>Un consultor senior se comunicará directamente a su teléfono (${booking.phone}) o correo corporativo para coordinar la sesión virtual privada.</li>
+            <li>Un consultor senior se comunicará directamente a su teléfono (${safeBooking.phone}) o correo corporativo para coordinar la sesión virtual privada.</li>
             <li>Toda la documentación técnica que comparta durante la sesión se encuentra protegida bajo el Acuerdo Bilateral de Confidencialidad conforme a los estándares de custodia de ISO/IEC 27001:2022 y NIST CSF 2.0.</li>
           </ul>
 
@@ -385,7 +423,7 @@ app.post('/api/workspace/sync-booking', async (req: Request, res: Response) => {
 
       const clientMsgRaw = createRfc2822(
         booking.email,
-        `[CONFIRMACIÓN] Diagnóstico Técnico Risknet - Folio ${booking.refCode} (NDA Formalizado)`,
+        `[CONFIRMACIÓN] Diagnóstico Técnico Risknet - Folio ${safeBooking.refCode} (NDA Formalizado)`,
         clientHtml
       );
 
@@ -419,44 +457,44 @@ app.post('/api/workspace/sync-booking', async (req: Request, res: Response) => {
         const adminHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 25px; border: 1px solid #cbd5e1; border-top: 4px solid #16a34a; background-color: #ffffff; color: #1e293b;">
             <span style="font-size: 11px; font-weight: bold; color: #16a34a; text-transform: uppercase;">Nuevo Lead / Solicitud de Diagnóstico GRC</span>
-            <h2 style="color: #0f172a; margin: 5px 0 15px 0; font-size: 20px;">${booking.org}</h2>
+            <h2 style="color: #0f172a; margin: 5px 0 15px 0; font-size: 20px;">${safeBooking.org}</h2>
             
             <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
               <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 8px 12px; font-weight: bold; width: 35%;">Folio / Ref:</td>
-                <td style="padding: 8px 12px; font-family: monospace; color: #0284c7;">${booking.refCode}</td>
+                <td style="padding: 8px 12px; font-family: monospace; color: #0284c7;">${safeBooking.refCode}</td>
               </tr>
               <tr style="border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 8px 12px; font-weight: bold;">Cliente:</td>
-                <td style="padding: 8px 12px;">${booking.name}</td>
+                <td style="padding: 8px 12px;">${safeBooking.name}</td>
               </tr>
               <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 8px 12px; font-weight: bold;">Empresa:</td>
-                <td style="padding: 8px 12px;"><strong>${booking.org}</strong></td>
+                <td style="padding: 8px 12px;"><strong>${safeBooking.org}</strong></td>
               </tr>
               <tr style="border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 8px 12px; font-weight: bold;">Email Corporativo:</td>
-                <td style="padding: 8px 12px;"><a href="mailto:${booking.email}">${booking.email}</a></td>
+                <td style="padding: 8px 12px;"><a href="mailto:${encodeURIComponent(booking.email)}">${safeBooking.email}</a></td>
               </tr>
               <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 8px 12px; font-weight: bold;">Teléfono / WhatsApp:</td>
-                <td style="padding: 8px 12px;"><a href="tel:${booking.phone}">${booking.phone}</a></td>
+                <td style="padding: 8px 12px;"><a href="tel:${encodeURIComponent(booking.phone)}">${safeBooking.phone}</a></td>
               </tr>
               <tr style="border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 8px 12px; font-weight: bold;">Colaboradores:</td>
-                <td style="padding: 8px 12px;">${booking.size}</td>
+                <td style="padding: 8px 12px;">${safeBooking.size}</td>
               </tr>
               <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 8px 12px; font-weight: bold;">Estándar Foco:</td>
-                <td style="padding: 8px 12px; color: #0284c7; font-weight: bold;">${booking.standard}</td>
+                <td style="padding: 8px 12px; color: #0284c7; font-weight: bold;">${safeBooking.standard}</td>
               </tr>
               <tr style="border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 8px 12px; font-weight: bold;">Desafío / Mensaje:</td>
-                <td style="padding: 8px 12px; color: #475569;">${booking.msg || 'No especificado'}</td>
+                <td style="padding: 8px 12px; color: #475569;">${safeBooking.msg}</td>
               </tr>
               <tr style="background-color: #f8fafc;">
                 <td style="padding: 8px 12px; font-weight: bold;">Fecha de Registro:</td>
-                <td style="padding: 8px 12px;">${booking.timestamp || new Date().toLocaleString('es-CO')}</td>
+                <td style="padding: 8px 12px;">${safeBooking.timestamp}</td>
               </tr>
             </table>
 
@@ -468,7 +506,7 @@ app.post('/api/workspace/sync-booking', async (req: Request, res: Response) => {
 
         const adminMsgRaw = createRfc2822(
           recipient,
-          `[NUEVO CLIENTE GRC] ${booking.org} - Folio ${booking.refCode}`,
+          `[NUEVO CLIENTE GRC] ${safeBooking.org} - Folio ${safeBooking.refCode}`,
           adminHtml
         );
 
