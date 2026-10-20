@@ -1,0 +1,6 @@
+{
+  "name": "Risknet - GRC & Ciberseguridad Estratégica",
+  "description": "Consultoría estratégica en GRC, SGSI ISO/IEC 27001:2022, alineación NIST CSF 2.0 y servicios gestionados vGRC con presencia en EE. UU. y Colombia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
