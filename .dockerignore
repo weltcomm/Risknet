@@ -1,0 +1,34 @@
+# ==========================================
+# SECURE BY DESIGN: .dockerignore
+# ==========================================
+
+# 1. Secretos y Entornos (CRÍTICO)
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+
+# 2. Control de Versiones
+.git
+.gitignore
+.github
+.gitlab-ci.yml
+
+# 3. Archivos de Infraestructura
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# 4. Dependencias y Logs Locales
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# 5. Archivos de Sistema Operativo e IDEs
+.DS_Store
+.idea
+.vscode
+*.swp
