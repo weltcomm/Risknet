@@ -3066,10 +3066,10 @@
               </button>
 
               <div id="workspace-user-profile" class="hidden flex flex-wrap items-center gap-3">
-                <a id="workspace-sheet-link" href="#" target="_blank" class="hidden px-3 py-1.5 bg-brand-surface border border-brand-emerald text-brand-emerald text-xs hover:bg-brand-emerald hover:text-brand-bg rounded-sm flex items-center gap-1.5 transition-colors font-bold shadow-sm">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                  <span>Abrir Hoja de Clientes GRC ↗</span>
-                </a>
+                <button type="button" id="workspace-sheet-link" onclick="openGoogleSpreadsheet()" class="hidden px-3.5 py-1.5 bg-brand-surface border border-brand-emerald text-brand-emerald text-xs hover:bg-brand-emerald hover:text-brand-bg rounded-sm flex items-center gap-1.5 transition-colors font-bold shadow-sm cursor-pointer">
+                  <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  <span id="workspace-sheet-btn-text">Abrir Hoja de Clientes GRC ↗</span>
+                </button>
                 <button type="button" onclick="handleGoogleSignOut()" class="text-brand-muted hover:text-red-400 text-xs underline cursor-pointer">
                   Desconectar Google
                 </button>

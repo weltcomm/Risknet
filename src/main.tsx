@@ -9,8 +9,9 @@ import {
 import { User } from 'firebase/auth';
 
 let currentUser: User | null = null;
-let currentSpreadsheetUrl: string | null = null;
+let currentSpreadsheetUrl: string | null = localStorage.getItem('risknet_spreadsheet_url') || null;
 let pendingBookingData: any = null;
+let isFetchingSheet = false;
 
 // Zero Trust Whitelist of Authorized Administrators
 const AUTHORIZED_ADMIN_EMAILS = [
@@ -38,13 +39,46 @@ function showAdminSecurityAlert(message: string) {
   }
 }
 
+async function fetchSpreadsheetInfo(token: string): Promise<string | null> {
+  if (isFetchingSheet) return currentSpreadsheetUrl;
+  try {
+    isFetchingSheet = true;
+    const res = await fetch('/api/workspace/get-or-create-sheet', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.spreadsheetUrl) {
+        currentSpreadsheetUrl = data.spreadsheetUrl;
+        localStorage.setItem('risknet_spreadsheet_url', data.spreadsheetUrl);
+        if (data.spreadsheetId) {
+          setSpreadsheetId(data.spreadsheetId);
+        }
+        const sheetBtn = document.getElementById('workspace-sheet-link');
+        if (sheetBtn) {
+          sheetBtn.classList.remove('hidden');
+        }
+        return data.spreadsheetUrl;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch spreadsheet info:', err);
+  } finally {
+    isFetchingSheet = false;
+  }
+  return currentSpreadsheetUrl;
+}
+
 function updateWorkspaceUI(user: User | null, token: string | null) {
   const statusDot = document.getElementById('workspace-status-dot');
   const statusLabel = document.getElementById('workspace-status-label');
   const statusDesc = document.getElementById('workspace-status-desc');
   const loginBtn = document.getElementById('btn-google-login');
   const userProfile = document.getElementById('workspace-user-profile');
-  const sheetLink = document.getElementById('workspace-sheet-link') as HTMLAnchorElement | null;
+  const sheetLink = document.getElementById('workspace-sheet-link');
 
   if (user && token) {
     if (statusDot) {
@@ -64,12 +98,11 @@ function updateWorkspaceUI(user: User | null, token: string | null) {
       userProfile.classList.remove('hidden');
     }
     if (sheetLink) {
-      if (currentSpreadsheetUrl) {
-        sheetLink.href = currentSpreadsheetUrl;
-        sheetLink.classList.remove('hidden');
-      } else {
-        sheetLink.classList.add('hidden');
-      }
+      sheetLink.classList.remove('hidden');
+    }
+    // Proactively fetch or verify spreadsheet in background
+    if (!currentSpreadsheetUrl) {
+      fetchSpreadsheetInfo(token);
     }
   } else {
     if (statusDot) {
@@ -87,6 +120,9 @@ function updateWorkspaceUI(user: User | null, token: string | null) {
     }
     if (userProfile) {
       userProfile.classList.add('hidden');
+    }
+    if (sheetLink) {
+      sheetLink.classList.add('hidden');
     }
   }
 }
@@ -188,10 +224,47 @@ function updateWorkspaceUI(user: User | null, token: string | null) {
   }
 };
 
+(window as any).openGoogleSpreadsheet = async () => {
+  const token = await getAccessToken();
+  if (!token) {
+    alert('Por favor conecta primero tu cuenta autorizada de Google.');
+    return;
+  }
+
+  const btnText = document.getElementById('workspace-sheet-btn-text');
+  const originalText = btnText ? btnText.textContent : 'Abrir Hoja de Clientes GRC ↗';
+
+  if (currentSpreadsheetUrl) {
+    window.open(currentSpreadsheetUrl, '_blank');
+    return;
+  }
+
+  if (btnText) {
+    btnText.textContent = 'Abriendo Google Sheet...';
+  }
+
+  try {
+    const url = await fetchSpreadsheetInfo(token);
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      alert('No se pudo acceder a la hoja de cálculo. Por favor reintenta o verifica tu conexión con Google.');
+    }
+  } catch (err: any) {
+    console.error('Error opening Google Sheet:', err);
+    alert('Error al acceder a Google Sheets: ' + (err.message || 'Error de conexión'));
+  } finally {
+    if (btnText) {
+      btnText.textContent = originalText;
+    }
+  }
+};
+
 (window as any).handleGoogleSignOut = async () => {
   await logout();
   currentUser = null;
   currentSpreadsheetUrl = null;
+  localStorage.removeItem('risknet_spreadsheet_url');
   updateWorkspaceUI(null, null);
 };
 
@@ -269,9 +342,9 @@ function updateWorkspaceUI(user: User | null, token: string | null) {
       }
       if (data.spreadsheetUrl) {
         currentSpreadsheetUrl = data.spreadsheetUrl;
-        const sheetLink = document.getElementById('workspace-sheet-link') as HTMLAnchorElement | null;
+        localStorage.setItem('risknet_spreadsheet_url', data.spreadsheetUrl);
+        const sheetLink = document.getElementById('workspace-sheet-link');
         if (sheetLink) {
-          sheetLink.href = data.spreadsheetUrl;
           sheetLink.classList.remove('hidden');
         }
       }
