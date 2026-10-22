@@ -1,8 +1,9 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
 
 dotenv.config();
 
@@ -10,23 +11,38 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
-// Security Hardening: Disable Express fingerprinting and set defensive HTTP headers
+// ==========================================
+// 1. BLINDAJE DE SEGURIDAD & CABECERAS HTTP
+// ==========================================
 app.disable('x-powered-by');
 
-app.use((_req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  next();
-});
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: [
+          "'self'",
+          'https://generativelanguage.googleapis.com',
+          'https://www.googleapis.com',
+          'https://sheets.googleapis.com',
+          'https://gmail.googleapis.com',
+        ],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '1mb' }));
 
-// Defensive Sanitization Helper against HTML Injection
-function escapeHtml(value: any): string {
+// Helper defensivo contra inyección HTML
+function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) return '';
   return String(value)
     .replace(/&/g, '&amp;')
@@ -64,13 +80,19 @@ Pautas de Interacción:
 - Siempre en idioma español claro con terminología estándar de ciberseguridad.
 - Si la consulta involucra iniciar una auditoría, evaluación o atención de incidentes, orienta al usuario a agendar el Diagnóstico Inicial en el sitio o contactar al canal CISO en aurbina@risknet.us.`;
 
-// Endpoint for AI Advisor Chat
+// ==========================================
+// 2. ENDPOINT: CHAT CON GEMINI AI
+// ==========================================
 app.post('/api/chat', async (req: Request, res: Response) => {
   try {
     const { message, history } = req.body;
 
-    if (!message || typeof message !== 'string') {
-      return res.status(400).json({ error: 'El mensaje es requerido.' });
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({ error: 'El mensaje es requerido y no puede estar vacío.' });
+    }
+
+    if (message.length > 2000) {
+      return res.status(413).json({ error: 'Longitud de mensaje excedida (máximo 2000 caracteres).' });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -80,17 +102,17 @@ app.post('/api/chat', async (req: Request, res: Response) => {
         apiKey: apiKey,
         httpOptions: {
           headers: {
-            'User-Agent': 'aistudio-build',
+            'User-Agent': 'risknet-security-engine/2.0',
           },
         },
       });
 
-      // Prepare conversation contents
+      // Mapeo seguro del historial de conversación (máximo 6 turnos para optimizar contexto y latencia)
       const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
 
       if (Array.isArray(history)) {
-        for (const item of history.slice(-8)) {
-          if (item && item.role && item.text) {
+        for (const item of history.slice(-6)) {
+          if (item?.role && typeof item.text === 'string') {
             contents.push({
               role: item.role === 'user' ? 'user' : 'model',
               parts: [{ text: item.text }],
@@ -101,75 +123,61 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
       contents.push({
         role: 'user',
-        parts: [{ text: message }],
+        parts: [{ text: message.trim() }],
       });
 
+      // Usar modelo de producción estable soportado por la API de Google GenAI
       const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: 'gemini-2.5-flash',
         contents: contents,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.7,
+          temperature: 0.3, // Menor temperatura para rigor técnico en GRC
         },
       });
 
-      const replyText = response.text || 'No fue posible generar una respuesta en este momento.';
+      const replyText = response.text || 'No fue posible generar una respuesta determinista.';
       return res.json({ reply: replyText });
     } else {
-      // Intelligent fallback when API key is not configured in local environment
-      const lower = message.toLowerCase();
-      let fallbackReply = '';
-
-      if (lower.includes('nist') || lower.includes('csf') || lower.includes('gobernar') || lower.includes('tier')) {
-        fallbackReply = `El marco **NIST CSF 2.0** establece una estructura de resiliencia dinámica basada en resultados:\n\n` +
-          `• **Función Gobernar (GV)**: Es el nuevo eje transversal obligatorio que asegura que la ciberseguridad esté integrada con la estrategia de negocio y la junta directiva (incluye Contexto Organizacional, Estrategia de Riesgos y Cadena de Suministro GV.SC).\n` +
-          `• **Ruedas Operativas**: Identificar (ID), Proteger (PR), Detectar (DE), Responder (RS) y Recuperar (RC).\n` +
-          `• **Tiers de Implementación (1 al 4)**: Desde Parcial (1) hasta Adaptativo (4), evaluando cómo la organización percibe y responde al riesgo.\n` +
-          `• **Ciclo de 5 Pasos**: Alcance -> Recopilación -> Creación de Perfiles -> Análisis de Brechas (Gap Analysis) -> POA&M.\n\n` +
-          `¿Deseas que te orientemos en cómo evaluar el Tier actual de tu organización? Puedes agendar una sesión de diagnóstico en nuestra sección de contacto.`;
-      } else if (lower.includes('iso') || lower.includes('27001') || lower.includes('anexo a') || lower.includes('sgsi') || lower.includes('control')) {
-        fallbackReply = `La norma **ISO/IEC 27001:2022** es el estándar internacional para el Sistema de Gestión de Seguridad de la Información (SGSI):\n\n` +
-          `• **Estructura del Anexo A**: Se simplificó a **93 controles** agrupados en 4 temáticas: Organizacionales (37), Personas (8), Físicos (14) y Tecnológicos (34).\n` +
-          `• **11 Nuevos Controles Críticos**: Entre ellos destacan Inteligencia de Amenazas (A.5.7), Seguridad en la Nube (A.5.23), Preparación TIC (A.5.30), Gestión de Configuración (A.8.9), Supresión y Enmascaramiento de Datos (A.8.10/11) y Codificación Segura (A.8.28).\n` +
-          `• **Ciclo PDCA**: Planificar, Hacer, Verificar y Actuar para mejora continua.\n\n` +
-          `En Risknet contamos con **Auditores Internos Certificados ISO/IEC 27001:2022** para guiar a tu equipo en la adecuación y superar la auditoría de certificación.`;
-      } else if (lower.includes('vgrc') || lower.includes('servicio') || lower.includes('plataforma')) {
-        fallbackReply = `El modelo **vGRC (Virtual GRC as a Service)** de Risknet resuelve la escasez de talento especializado y el alto costo de equipos internos:\n\n` +
-          `• **Plataforma + CISO Asignado**: Te proporciona una plataforma tecnológica para gestión continua de controles, respaldada por un equipo consultor senior.\n` +
-          `• **Monitoreo de Terceros**: Clasificación y control de riesgos en la cadena de suministro (proveedores SaaS y partners cloud).\n` +
-          `• **Alineación Continua**: Mapeo simultáneo entre ISO 27001 y NIST CSF 2.0 sin duplicar esfuerzos documentales.\n\n` +
-          `Puedes solicitar un diagnóstico preliminar para dimensionar el esquema adecuado para tu empresa.`;
-      } else if (lower.includes('contacto') || lower.includes('correo') || lower.includes('sede') || lower.includes('telefono') || lower.includes('medellin') || lower.includes('albuquerque')) {
-        fallbackReply = `Puedes comunicarte directamente con nuestros canales y sedes binacionales:\n\n` +
-          `• **Sede Principal (USA)**: 2105 Vista Oeste NW, Suite E-1140, Albuquerque, NM 87120. Tel: (505) 565-7836.\n` +
-          `• **Medellín Hub (Colombia)**: Soporte técnico y consultivo LATAM. Tel/WhatsApp: +57 301 248 3308.\n` +
-          `• **Email Directo CISO**: aurbina@risknet.us\n` +
-          `• **Canal Seguro PGP**: Fingerprint 0x4F8A 9E21 773B CC42 para envío de información técnica cifrada.`;
-      } else if (lower.includes('nda') || lower.includes('confidencialidad') || lower.includes('diagnostico') || lower.includes('agenda')) {
-        fallbackReply = `El **Diagnóstico Inicial de Risknet** se realiza bajo un estricto protocolo de confidencialidad:\n\n` +
-          `• Al completar el formulario de agendamiento y marcar el checklist, se suscribe automáticamente un **Acuerdo Bilateral de Confidencialidad (Mutual NDA)** vinculante por 3 años.\n` +
-          `• Se emite un Folio Único de Seguridad y un sello criptográfico SHA-256.\n` +
-          `• Al enviar tu solicitud, puedes descargar de inmediato tu copia formal firmada o verla en pantalla.\n\n` +
-          `Todo el intercambio técnico está respaldado por los controles de custodia de ISO 27001 y NIST CSF 2.0.`;
-      } else {
-        fallbackReply = `Hola. Soy el **Risknet AI Advisor**, consultor virtual en Gobierno, Riesgo y Cumplimiento (GRC) y Ciberseguridad Defensiva.\n\n` +
-          `Puedo orientarte sobre:\n` +
-          `1. **NIST CSF 2.0**: Implementación de la función Gobernar (GV), Tiers 1-4 y matriz de resiliencia.\n` +
-          `2. **ISO/IEC 27001:2022**: Adaptación al nuevo Anexo A de 93 controles y auditoría interna del SGSI.\n` +
-          `3. **Modelo vGRC**: Plataforma y servicios gestionados para terceros y cumplimiento continuo.\n` +
-          `4. **Diagnóstico & NDA**: Agendamiento técnico y formalización bilateral automática.\n\n` +
-          `¿Sobre cuál de estos temas deseas profundizar? También puedes consultar directamente con nuestro CISO en **aurbina@risknet.us**.`;
-      }
-
-      return res.json({ reply: fallbackReply });
+      // Fallback determinista en entornos locales/offline
+      return res.json({ reply: getDeterministicFallback(message) });
     }
-  } catch (error: any) {
-    console.error('Error in /api/chat:', error);
-    return res.status(500).json({ error: 'Error interno en el asistente virtual.' });
+  } catch (error: unknown) {
+    console.error('[Risknet AI Chat Engine Error]:', error);
+    return res.status(500).json({ error: 'Error interno en el asistente virtual de Risknet.' });
   }
 });
 
-function createRfc2822(to: string, subject: string, htmlContent: string) {
+function getDeterministicFallback(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes('nist') || lower.includes('csf') || lower.includes('gobernar') || lower.includes('tier')) {
+    return (
+      `El marco **NIST CSF 2.0** establece una estructura de resiliencia dinámica basada en resultados:\n\n` +
+      `• **Función Gobernar (GV)**: Es el nuevo eje transversal obligatorio que asegura la integración de la ciberseguridad con la estrategia directiva.\n` +
+      `• **Ruedas Operativas**: Identificar (ID), Proteger (PR), Detectar (DE), Responder (RS) y Recuperar (RC).\n` +
+      `• **Tiers de Implementación (1 al 4)**: Desde Parcial (1) hasta Adaptativo (4).\n` +
+      `• **Ciclo de 5 Pasos**: Alcance -> Recopilación -> Creación de Perfiles -> Gap Analysis -> POA&M.\n\n` +
+      `¿Deseas evaluar el Tier actual de tu organización? Puedes solicitar un diagnóstico en nuestra sección de contacto.`
+    );
+  } else if (lower.includes('iso') || lower.includes('27001') || lower.includes('sgsi')) {
+    return (
+      `La norma **ISO/IEC 27001:2022** rige el Sistema de Gestión de Seguridad de la Información (SGSI):\n\n` +
+      `• **Anexo A Simplificado**: 93 controles agrupados en Organizacionales (37), Personas (8), Físicos (14) y Tecnológicos (34).\n` +
+      `• **11 Nuevos Controles**: Destacan A.5.7 (Threat Intelligence), A.5.23 (Seguridad Cloud), A.8.12 (Data Leakage Prevention) y A.8.28 (Secure Coding).\n\n` +
+      `En Risknet disponemos de auditores certificados para asegurar su proceso de certificación.`
+    );
+  }
+  return (
+    `Bienvenido a **Risknet RegTech & Defense**.\n\n` +
+    `Puedo orientarte en la adopción de **NIST CSF 2.0**, **ISO/IEC 27001:2022**, implementación de **vGRC** y formalización de diagnósticos con NDA bilateral.\n` +
+    `¿En qué área requiere apoyo su organización?`
+  );
+}
+
+// ==========================================
+// 3. INTEGRACIÓN CON WORKSPACE (SHEETS + GMAIL)
+// ==========================================
+function createRfc2822(to: string, subject: string, htmlContent: string): string {
   const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
   const message = [
     `To: ${to}`,
@@ -188,158 +196,63 @@ function createRfc2822(to: string, subject: string, htmlContent: string) {
     .replace(/=+$/, '');
 }
 
-// Endpoint to sync booking to Google Sheets and dispatch confirmation via Gmail
 app.post('/api/workspace/sync-booking', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Falta token de autorización de Google Workspace.' });
     }
 
     const accessToken = authHeader.split(' ')[1];
     const { booking } = req.body;
 
-    if (!booking || !booking.email || !booking.org || !booking.refCode) {
-      return res.status(400).json({ error: 'Datos de agendamiento incompletos.' });
+    if (!booking?.email || !booking?.org || !booking?.refCode) {
+      return res.status(400).json({ error: 'Payload incompleto: email, org y refCode son obligatorios.' });
     }
 
-    // Zero Trust Server-Side Validation: verify the token belongs to an authorized admin account
+    // Zero-Trust: Validación de usuario administrador
     const AUTHORIZED_ADMIN_EMAILS = [
       (process.env.ADMIN_EMAIL || 'aurbina@risknet.us').toLowerCase(),
       'contactoweltcomm@gmail.com',
     ];
 
-    try {
-      const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!userInfoRes.ok) {
-        return res.status(401).json({ error: 'Token de Google Workspace inválido o expirado.' });
-      }
-      const userInfo = await userInfoRes.json();
-      const tokenEmail = (userInfo.email || '').toLowerCase();
-      if (!tokenEmail || !AUTHORIZED_ADMIN_EMAILS.includes(tokenEmail)) {
-        console.warn(`[SECURITY] Blocked unauthorized Google account from sync: ${tokenEmail}`);
-        return res.status(403).json({
-          error: `Acceso restringido: La cuenta Google (${tokenEmail || 'desconocida'}) no está autorizada para administrar o sincronizar datos de Risknet.`,
-        });
-      }
-    } catch (vErr) {
-      console.warn('Could not verify Google token userinfo:', vErr);
-      return res.status(500).json({ error: 'Error al verificar credenciales con Google.' });
+    const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!userInfoRes.ok) {
+      return res.status(401).json({ error: 'Token de Google expirado o denegado.' });
     }
 
-    // Defensive Sanitization: Escaped fields to prevent HTML injection in emails
-    const safeBooking = {
+    const userInfo = await userInfoRes.json();
+    const tokenEmail = (userInfo.email || '').toLowerCase();
+
+    if (!AUTHORIZED_ADMIN_EMAILS.includes(tokenEmail)) {
+      console.warn(`[SECURITY ALERT] Intento de acceso no autorizado desde: ${tokenEmail}`);
+      return res.status(403).json({ error: 'Cuenta no autorizada para operaciones administrativas en Risknet.' });
+    }
+
+    // Sanitización defensiva
+    const safe = {
       refCode: escapeHtml(booking.refCode),
       timestamp: escapeHtml(booking.timestamp || new Date().toLocaleString('es-CO')),
-      name: escapeHtml(booking.name),
+      name: escapeHtml(booking.name || 'No especificado'),
       org: escapeHtml(booking.org),
       email: escapeHtml(booking.email),
-      phone: escapeHtml(booking.phone),
-      size: escapeHtml(booking.size),
-      standard: escapeHtml(booking.standard),
-      msg: escapeHtml(booking.msg || 'No especificado'),
+      phone: escapeHtml(booking.phone || 'No especificado'),
+      size: escapeHtml(booking.size || 'No especificado'),
+      standard: escapeHtml(booking.standard || 'Diagnóstico Integral'),
+      msg: escapeHtml(booking.msg || 'N/A'),
       hash: escapeHtml(booking.hash || 'SHA256: VALIDATED'),
     };
 
-    let spreadsheetId = booking.spreadsheetId || null;
-    let spreadsheetUrl = '';
+    // Usar ID de hoja configurado en entorno prioritariamente para evitar round-trips a Drive
+    let spreadsheetId = process.env.GOOGLE_SHEET_ID || booking.spreadsheetId || null;
     const sheetTabName = 'Diagnosticos';
 
-    // --- STEP 1: GOOGLE SHEETS REGISTRATION ---
-    if (!spreadsheetId) {
-      try {
-        const driveQuery = "name = 'Risknet - Diagnósticos & Clientes GRC' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false";
-        const driveSearchRes = await fetch(
-          `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(driveQuery)}`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-
-        if (driveSearchRes.ok) {
-          const driveData = await driveSearchRes.json();
-          if (driveData.files && driveData.files.length > 0) {
-            spreadsheetId = driveData.files[0].id;
-            console.log('Found existing Google Sheet:', spreadsheetId);
-          }
-        } else {
-          console.warn('Drive search error:', driveSearchRes.status, await driveSearchRes.text());
-        }
-      } catch (err) {
-        console.warn('Could not search Drive for sheet:', err);
-      }
-    }
-
-    if (!spreadsheetId) {
-      try {
-        const createSheetRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            properties: {
-              title: 'Risknet - Diagnósticos & Clientes GRC',
-            },
-            sheets: [
-              {
-                properties: {
-                  title: sheetTabName,
-                  gridProperties: { frozenRowCount: 1 },
-                },
-              },
-            ],
-          }),
-        });
-
-        if (createSheetRes.ok) {
-          const sheetData = await createSheetRes.json();
-          spreadsheetId = sheetData.spreadsheetId;
-          console.log('Created new Google Sheet:', spreadsheetId);
-
-          const headerRes = await fetch(
-            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetTabName + '!A1:K1')}?valueInputOption=USER_ENTERED`,
-            {
-              method: 'PUT',
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                values: [
-                  [
-                    'Folio / ID',
-                    'Fecha de Registro',
-                    'Nombre del Cliente',
-                    'Organización',
-                    'Correo Corporativo',
-                    'Teléfono',
-                    'Colaboradores',
-                    'Estándar / Foco',
-                    'Mensaje / Desafío',
-                    'Estado Acuerdo NDA',
-                    'Sello Criptográfico SHA-256',
-                  ],
-                ],
-              }),
-            }
-          );
-          if (!headerRes.ok) {
-            console.warn('Could not set headers in new sheet:', headerRes.status, await headerRes.text());
-          }
-        } else {
-          console.warn('Create sheet failed:', createSheetRes.status, await createSheetRes.text());
-        }
-      } catch (err) {
-        console.warn('Could not create Google Sheet:', err);
-      }
-    }
-
-    // Append row to sheet
+    // Registro en Google Sheets
+    let sheetSuccess = false;
     if (spreadsheetId) {
-      spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
-
       try {
         const appendRes = await fetch(
           `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetTabName + '!A:K')}:append?valueInputOption=USER_ENTERED`,
@@ -352,206 +265,91 @@ app.post('/api/workspace/sync-booking', async (req: Request, res: Response) => {
             body: JSON.stringify({
               values: [
                 [
-                  booking.refCode,
-                  booking.timestamp || new Date().toLocaleString('es-CO'),
-                  booking.name,
-                  booking.org,
-                  booking.email,
-                  booking.phone,
-                  booking.size,
-                  booking.standard,
-                  booking.msg || 'N/A',
+                  safe.refCode,
+                  safe.timestamp,
+                  safe.name,
+                  safe.org,
+                  safe.email,
+                  safe.phone,
+                  safe.size,
+                  safe.standard,
+                  safe.msg,
                   'Formalizado y Vigente (3 años)',
-                  booking.hash || 'SHA256: VALIDATED',
+                  safe.hash,
                 ],
               ],
             }),
           }
         );
-        if (!appendRes.ok) {
-          console.warn('Append to sheet failed:', appendRes.status, await appendRes.text());
-        } else {
-          console.log('Row appended successfully to Google Sheet:', spreadsheetId);
-        }
-      } catch (err) {
-        console.warn('Could not append row to Google Sheet:', err);
+        sheetSuccess = appendRes.ok;
+      } catch (sheetErr) {
+        console.error('[Sheets Sync Exception]:', sheetErr);
       }
     }
 
-    // --- STEP 2: GMAIL DISPATCH ---
-    let clientEmailSent = false;
-    let adminEmailSent = false;
-    let emailLogs: string[] = [];
-
-    // Email 1: Confirmation to Client
-    try {
-      const clientHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 25px; border: 1px solid #cbd5e1; border-top: 4px solid #00D8FF; background-color: #ffffff; color: #1e293b;">
-          <div style="margin-bottom: 20px;">
-            <span style="font-size: 11px; font-weight: bold; color: #0284c7; text-transform: uppercase; letter-spacing: 1px;">Confirmación Oficial de Diagnóstico Técnico</span>
-            <h2 style="color: #0f172a; margin: 5px 0 0 0; font-size: 22px;">Risknet RegTech Enable Service</h2>
-            <p style="color: #64748b; font-size: 12px; margin: 2px 0 0 0;">Operado por Weltcomm LLC · Albuquerque (USA) & Medellín Hub (Colombia)</p>
-          </div>
-
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 20px; font-size: 13px;">
-            <strong>Estimado/a ${safeBooking.name},</strong><br><br>
-            Hemos registrado exitosamente la solicitud de diagnóstico técnico para <strong>${safeBooking.org}</strong>.
-            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-family: monospace; font-size: 12px;">
-              <strong>FOLIO DE ATENCIÓN:</strong> <span style="color: #0284c7; font-weight: bold;">${safeBooking.refCode}</span><br>
-              <strong>ESTÁNDAR SELECCIONADO:</strong> ${safeBooking.standard}<br>
-              <strong>ESTADO DEL ACUERDO:</strong> <span style="color: #16a34a; font-weight: bold;">NDA Bilateral Formalizado y Vigente (3 años)</span><br>
-              <strong>SELLO CRIPTOGRÁFICO:</strong> ${safeBooking.hash}
-            </div>
-          </div>
-
-          <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase;">Próximos Pasos:</h3>
-          <ul style="font-size: 13px; color: #334155; line-height: 1.6; padding-left: 20px;">
-            <li>Nuestro equipo técnico asignado bajo la dirección de <strong>Alejandro Urbina (CISO)</strong> revisará el alcance preliminar.</li>
-            <li>Un consultor senior se comunicará directamente a su teléfono (${safeBooking.phone}) o correo corporativo para coordinar la sesión virtual privada.</li>
-            <li>Toda la documentación técnica que comparta durante la sesión se encuentra protegida bajo el Acuerdo Bilateral de Confidencialidad conforme a los estándares de custodia de ISO/IEC 27001:2022 y NIST CSF 2.0.</li>
-          </ul>
-
-          <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; line-height: 1.5;">
-            <strong>Canales Directos de Atención CISO:</strong><br>
-            • Email Directo CISO: <a href="mailto:aurbina@risknet.us" style="color: #0284c7;">aurbina@risknet.us</a><br>
-            • EE. UU. (Albuquerque): (505) 565-7836<br>
-            • Colombia (Medellín Hub): +57 301 248 3308<br>
-            • Clave Pública PGP: Fingerprint 0x4F8A 9E21 773B CC42
-          </div>
+    // Despacho concurrente de correos vía Gmail (Promise.allSettled)
+    const clientHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 25px; border: 1px solid #cbd5e1; border-top: 4px solid #00D8FF; background-color: #ffffff; color: #1e293b;">
+        <span style="font-size: 11px; font-weight: bold; color: #0284c7; text-transform: uppercase;">Confirmación Oficial de Diagnóstico Técnico</span>
+        <h2 style="color: #0f172a; margin: 5px 0;">Risknet RegTech & Defense</h2>
+        <p style="color: #64748b; font-size: 12px; margin: 0 0 15px 0;">Operado por Weltcomm LLC · USA & Colombia</p>
+        <p>Estimado/a <strong>${safe.name}</strong>, hemos registrado formalmente su solicitud para <strong>${safe.org}</strong>.</p>
+        <div style="background:#f8fafc; padding:12px; border-left:3px solid #0284c7; font-family:monospace; font-size:12px;">
+          FOLIO: ${safe.refCode}<br>
+          ESTÁNDAR: ${safe.standard}<br>
+          ESTADO: NDA Bilateral Formalizado (3 años)<br>
+          SELLO: ${safe.hash}
         </div>
-      `;
+      </div>
+    `;
 
-      const clientMsgRaw = createRfc2822(
-        booking.email,
-        `[CONFIRMACIÓN] Diagnóstico Técnico Risknet - Folio ${safeBooking.refCode} (NDA Formalizado)`,
-        clientHtml
-      );
+    const adminHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 25px; border-top: 4px solid #16a34a; background-color: #ffffff;">
+        <h3 style="color:#0f172a; margin:0 0 10px 0;">Nueva Solicitud de Diagnóstico GRC</h3>
+        <p><strong>Organización:</strong> ${safe.org} (${safe.size} colaboradores)</p>
+        <p><strong>Contacto:</strong> ${safe.name} | ${safe.email} | ${safe.phone}</p>
+        <p><strong>Estándar:</strong> ${safe.standard}</p>
+        <p><strong>Folio:</strong> ${safe.refCode}</p>
+      </div>
+    `;
 
-      const clientSendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    const emailTasks = [
+      // Enviar al cliente
+      fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ raw: clientMsgRaw }),
-      });
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw: createRfc2822(booking.email, `[CONFIRMACIÓN] Diagnóstico Risknet - Folio ${safe.refCode}`, clientHtml) }),
+      }),
+      // Enviar a la directiva CISO
+      fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw: createRfc2822('aurbina@risknet.us', `[NUEVO LEAD] ${safe.org} - Folio ${safe.refCode}`, adminHtml) }),
+      }),
+    ];
 
-      if (clientSendRes.ok) {
-        clientEmailSent = true;
-        emailLogs.push(`Cliente (${booking.email}): Despachado exitosamente.`);
-        console.log(`Confirmation email sent to client: ${booking.email}`);
-      } else {
-        const errText = await clientSendRes.text();
-        console.warn('Gmail client send failed:', clientSendRes.status, errText);
-        emailLogs.push(`Cliente: Error ${clientSendRes.status}`);
-      }
-    } catch (err: any) {
-      console.warn('Could not send client email via Gmail:', err);
-      emailLogs.push(`Cliente: Excepción ${err.message}`);
-    }
+    const emailResults = await Promise.allSettled(emailTasks);
+    const clientDelivered = emailResults[0].status === 'fulfilled' && (emailResults[0].value as globalThis.Response).ok;
+    const adminDelivered = emailResults[1].status === 'fulfilled' && (emailResults[1].value as globalThis.Response).ok;
 
-    // Email 2: Alert to Admin / CISO (aurbina@risknet.us and contactoweltcomm@gmail.com)
-    const adminRecipients = ['aurbina@risknet.us', 'contactoweltcomm@gmail.com'];
-    for (const recipient of adminRecipients) {
-      try {
-        const adminHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 25px; border: 1px solid #cbd5e1; border-top: 4px solid #16a34a; background-color: #ffffff; color: #1e293b;">
-            <span style="font-size: 11px; font-weight: bold; color: #16a34a; text-transform: uppercase;">Nuevo Lead / Solicitud de Diagnóstico GRC</span>
-            <h2 style="color: #0f172a; margin: 5px 0 15px 0; font-size: 20px;">${safeBooking.org}</h2>
-            
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
-              <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 8px 12px; font-weight: bold; width: 35%;">Folio / Ref:</td>
-                <td style="padding: 8px 12px; font-family: monospace; color: #0284c7;">${safeBooking.refCode}</td>
-              </tr>
-              <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 8px 12px; font-weight: bold;">Cliente:</td>
-                <td style="padding: 8px 12px;">${safeBooking.name}</td>
-              </tr>
-              <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 8px 12px; font-weight: bold;">Empresa:</td>
-                <td style="padding: 8px 12px;"><strong>${safeBooking.org}</strong></td>
-              </tr>
-              <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 8px 12px; font-weight: bold;">Email Corporativo:</td>
-                <td style="padding: 8px 12px;"><a href="mailto:${encodeURIComponent(booking.email)}">${safeBooking.email}</a></td>
-              </tr>
-              <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 8px 12px; font-weight: bold;">Teléfono / WhatsApp:</td>
-                <td style="padding: 8px 12px;"><a href="tel:${encodeURIComponent(booking.phone)}">${safeBooking.phone}</a></td>
-              </tr>
-              <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 8px 12px; font-weight: bold;">Colaboradores:</td>
-                <td style="padding: 8px 12px;">${safeBooking.size}</td>
-              </tr>
-              <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 8px 12px; font-weight: bold;">Estándar Foco:</td>
-                <td style="padding: 8px 12px; color: #0284c7; font-weight: bold;">${safeBooking.standard}</td>
-              </tr>
-              <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 8px 12px; font-weight: bold;">Desafío / Mensaje:</td>
-                <td style="padding: 8px 12px; color: #475569;">${safeBooking.msg}</td>
-              </tr>
-              <tr style="background-color: #f8fafc;">
-                <td style="padding: 8px 12px; font-weight: bold;">Fecha de Registro:</td>
-                <td style="padding: 8px 12px;">${safeBooking.timestamp}</td>
-              </tr>
-            </table>
-
-            ${spreadsheetUrl ? `<div style="margin-top: 15px; padding: 10px; background-color: #f0fdf4; border: 1px solid #bbf7d0; font-size: 12px;">
-              <strong>Hoja de Google Sheets:</strong> <a href="${spreadsheetUrl}" target="_blank" style="color: #16a34a; font-weight: bold;">Abrir Hoja de Cálculo ↗</a>
-            </div>` : ''}
-          </div>
-        `;
-
-        const adminMsgRaw = createRfc2822(
-          recipient,
-          `[NUEVO CLIENTE GRC] ${safeBooking.org} - Folio ${safeBooking.refCode}`,
-          adminHtml
-        );
-
-        const adminSendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ raw: adminMsgRaw }),
-        });
-
-        if (adminSendRes.ok) {
-          adminEmailSent = true;
-          emailLogs.push(`Equipo CISO (${recipient}): Notificado exitosamente.`);
-          console.log(`Lead alert sent to admin: ${recipient}`);
-        } else {
-          const errText = await adminSendRes.text();
-          console.warn(`Admin send to ${recipient} failed:`, adminSendRes.status, errText);
-        }
-      } catch (err: any) {
-        console.warn(`Could not send admin email to ${recipient} via Gmail:`, err);
-      }
-    }
-
-    return res.json({
+    return res.status(200).json({
       success: true,
       spreadsheetId,
-      spreadsheetUrl,
-      clientEmailSent,
-      adminEmailSent,
-      emailLogs,
-      message: 'Sincronización completada exitosamente en Google Sheets y despacho por Gmail.',
+      sheetSynced: sheetSuccess,
+      clientEmailSent: clientDelivered,
+      adminEmailSent: adminDelivered,
+      message: 'Operación transaccional completada con resiliencia de servicios.',
     });
-  } catch (error: any) {
-    console.error('Error in /api/workspace/sync-booking:', error);
-    return res.status(500).json({
-      error: 'Error al sincronizar con Google Workspace.',
-      details: error.message || 'Error desconocido',
-    });
+  } catch (error: unknown) {
+    console.error('[Workspace Booking Fatal Error]:', error);
+    return res.status(500).json({ error: 'Fallo crítico al sincronizar con Google Workspace.' });
   }
 });
 
-// Setup Vite middleware in development or static serve in production
-async function startServer() {
+// ==========================================
+// 4. CICLO DE VIDA DEL SERVIDOR (DEV & PROD)
+// ==========================================
+async function startServer(): Promise<void> {
   const isDev = process.env.NODE_ENV !== 'production';
 
   if (isDev) {
@@ -563,27 +361,28 @@ async function startServer() {
 
     app.use(vite.middlewares);
 
-    app.use('*', async (req, res, next) => {
+    app.use('*', async (req: Request, res: Response, next: NextFunction) => {
       const url = req.originalUrl;
       try {
         const fs = await import('fs');
         let template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
         template = await vite.transformIndexHtml(url, template);
         res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
-      } catch (e: any) {
-        vite.ssrFixStacktrace(e);
+      } catch (e: unknown) {
+        vite.ssrFixStacktrace(e as Error);
         next(e);
       }
     });
   } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.use('*', (_req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+    const distPath = path.resolve(__dirname, 'dist');
+    app.use(express.static(distPath));
+    app.use('*', (_req: Request, res: Response) => {
+      res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  app.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`Risknet Security Server running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Risknet Core Shield]: Servidor en ejecución bajo http://0.0.0.0:${PORT}`);
   });
 }
 
