@@ -1,4 +1,7 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* =========================================================
    RISKNET: MOBILE RESPONSIVE ENGINE & ASSET CLAMPING
    ========================================================= */
@@ -41,7 +44,6 @@ a img {
 
 /* 4. Adaptación para pantallas móviles y tablets (Viewport < 1024px) */
 @media screen and (max-width: 1024px) {
-  /* Apilado vertical de botones de llamada a la acción */
   button,
   a[role="button"],
   a[class*="btn"] {
@@ -54,14 +56,12 @@ a img {
     padding: 0.85rem 1rem !important;
   }
 
-  /* Reducción fluida de títulos principales */
   h1 {
     font-size: clamp(1.75rem, 6vw, 2.4rem) !important;
     line-height: 1.2 !important;
     word-break: break-word;
   }
 
-  /* Evitar desbordamiento de contenedores de telemetría y badges */
   [class*="telemetry"],
   [class*="badge"],
   [class*="grid"] {
