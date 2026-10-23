@@ -23,19 +23,51 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+          'https://cdn.tailwindcss.com',
+          'https://apis.google.com',
+          'https://www.gstatic.com',
+          'https://*.firebaseapp.com',
+        ],
+        scriptSrcAttr: ["'unsafe-inline'"],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          'https://fonts.googleapis.com',
+          'https://cdn.tailwindcss.com',
+        ],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+        frameSrc: [
+          "'self'",
+          'https://accounts.google.com',
+          'https://*.firebaseapp.com',
+          'https://*.googleapis.com',
+        ],
+        frameAncestors: null,
         connectSrc: [
           "'self'",
           'https://generativelanguage.googleapis.com',
           'https://www.googleapis.com',
           'https://sheets.googleapis.com',
           'https://gmail.googleapis.com',
+          'https://identitytoolkit.googleapis.com',
+          'https://securetoken.googleapis.com',
+          'https://*.firebaseio.com',
+          'https://*.googleapis.com',
+          'ws:',
+          'wss:',
         ],
+        upgradeInsecureRequests: null,
       },
     },
+    frameguard: false,
     crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false,
   })
 );
 
@@ -97,47 +129,52 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
     const apiKey = process.env.GEMINI_API_KEY;
 
-    if (apiKey) {
-      const ai = new GoogleGenAI({
-        apiKey: apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'risknet-security-engine/2.0',
+    if (apiKey && apiKey.trim() !== '' && !apiKey.includes('YOUR_')) {
+      try {
+        const ai = new GoogleGenAI({
+          apiKey: apiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'risknet-security-engine/2.0',
+            },
           },
-        },
-      });
+        });
 
-      // Mapeo seguro del historial de conversación (máximo 6 turnos para optimizar contexto y latencia)
-      const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+        // Mapeo seguro del historial de conversación (máximo 6 turnos para optimizar contexto y latencia)
+        const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
 
-      if (Array.isArray(history)) {
-        for (const item of history.slice(-6)) {
-          if (item?.role && typeof item.text === 'string') {
-            contents.push({
-              role: item.role === 'user' ? 'user' : 'model',
-              parts: [{ text: item.text }],
-            });
+        if (Array.isArray(history)) {
+          for (const item of history.slice(-6)) {
+            if (item?.role && typeof item.text === 'string') {
+              contents.push({
+                role: item.role === 'user' ? 'user' : 'model',
+                parts: [{ text: item.text }],
+              });
+            }
           }
         }
+
+        contents.push({
+          role: 'user',
+          parts: [{ text: message.trim() }],
+        });
+
+        // Usar modelo de producción estable soportado por la API de Google GenAI
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: contents,
+          config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            temperature: 0.3, // Menor temperatura para rigor técnico en GRC
+          },
+        });
+
+        const replyText = response.text || 'No fue posible generar una respuesta determinista.';
+        return res.json({ reply: replyText });
+      } catch (geminiError: unknown) {
+        console.warn('[Risknet AI Notice]: Gemini API no disponible o cuota alcanzada, usando motor determinista.', geminiError);
+        return res.json({ reply: getDeterministicFallback(message) });
       }
-
-      contents.push({
-        role: 'user',
-        parts: [{ text: message.trim() }],
-      });
-
-      // Usar modelo de producción estable soportado por la API de Google GenAI
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: contents,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.3, // Menor temperatura para rigor técnico en GRC
-        },
-      });
-
-      const replyText = response.text || 'No fue posible generar una respuesta determinista.';
-      return res.json({ reply: replyText });
     } else {
       // Fallback determinista en entornos locales/offline
       return res.json({ reply: getDeterministicFallback(message) });
@@ -196,6 +233,168 @@ function createRfc2822(to: string, subject: string, htmlContent: string): string
     .replace(/=+$/, '');
 }
 
+interface SheetInfo {
+  id: string;
+  url: string;
+}
+
+const SHEET_TITLE = 'Risknet - Registros de Diagnóstico GRC';
+const SHEET_TAB_NAME = 'Diagnosticos';
+
+async function getOrCreateGoogleSheet(accessToken: string): Promise<SheetInfo | null> {
+  // 1. Si está configurado en variable de entorno
+  if (process.env.GOOGLE_SHEET_ID) {
+    try {
+      const checkRes = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${process.env.GOOGLE_SHEET_ID}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      if (checkRes.ok) {
+        return {
+          id: process.env.GOOGLE_SHEET_ID,
+          url: `https://docs.google.com/spreadsheets/d/${process.env.GOOGLE_SHEET_ID}/edit`,
+        };
+      }
+    } catch (e) {
+      console.warn('Error checking GOOGLE_SHEET_ID from env:', e);
+    }
+  }
+
+  // 2. Buscar en Google Drive por título
+  try {
+    const q = `name='${SHEET_TITLE}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`;
+    const driveRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,webViewLink)`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (driveRes.ok) {
+      const driveData = await driveRes.json();
+      if (Array.isArray(driveData.files) && driveData.files.length > 0) {
+        const file = driveData.files[0];
+        return {
+          id: file.id,
+          url: file.webViewLink || `https://docs.google.com/spreadsheets/d/${file.id}/edit`,
+        };
+      }
+    }
+  } catch (driveErr) {
+    console.warn('Error querying Google Drive files:', driveErr);
+  }
+
+  // 3. Crear hoja si no existe
+  try {
+    const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        properties: {
+          title: SHEET_TITLE,
+        },
+        sheets: [
+          {
+            properties: {
+              title: SHEET_TAB_NAME,
+              gridProperties: {
+                frozenRowCount: 1,
+              },
+            },
+            data: [
+              {
+                startRow: 0,
+                startColumn: 0,
+                rowData: [
+                  {
+                    values: [
+                      { userEnteredValue: { stringValue: 'Folio / RefCode' } },
+                      { userEnteredValue: { stringValue: 'Fecha y Hora' } },
+                      { userEnteredValue: { stringValue: 'Contacto' } },
+                      { userEnteredValue: { stringValue: 'Empresa / Organización' } },
+                      { userEnteredValue: { stringValue: 'Email Corporativo' } },
+                      { userEnteredValue: { stringValue: 'Teléfono / Móvil' } },
+                      { userEnteredValue: { stringValue: 'Tamaño Org' } },
+                      { userEnteredValue: { stringValue: 'Estándar / Marco Solicitado' } },
+                      { userEnteredValue: { stringValue: 'Requerimientos Técnicos' } },
+                      { userEnteredValue: { stringValue: 'Estado NDA' } },
+                      { userEnteredValue: { stringValue: 'Hash Criptográfico de Integridad' } },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (createRes.ok) {
+      const createdData = await createRes.json();
+      return {
+        id: createdData.spreadsheetId,
+        url:
+          createdData.spreadsheetUrl ||
+          `https://docs.google.com/spreadsheets/d/${createdData.spreadsheetId}/edit`,
+      };
+    }
+  } catch (createErr) {
+    console.error('Error creating Google Spreadsheet:', createErr);
+  }
+
+  return null;
+}
+
+app.post('/api/workspace/get-or-create-sheet', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Falta token de autorización de Google Workspace.' });
+    }
+
+    const accessToken = authHeader.split(' ')[1];
+
+    const AUTHORIZED_ADMIN_EMAILS = [
+      (process.env.ADMIN_EMAIL || 'aurbina@risknet.us').toLowerCase(),
+      'contactoweltcomm@gmail.com',
+    ];
+
+    const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!userInfoRes.ok) {
+      return res.status(401).json({ error: 'Token de Google expirado o denegado.' });
+    }
+
+    const userInfo = await userInfoRes.json();
+    const tokenEmail = (userInfo.email || '').toLowerCase();
+
+    if (!AUTHORIZED_ADMIN_EMAILS.includes(tokenEmail)) {
+      console.warn(`[SECURITY ALERT] Intento de acceso no autorizado a Google Sheet desde: ${tokenEmail}`);
+      return res.status(403).json({ error: 'Cuenta no autorizada para acceder a la hoja administrativa de Risknet.' });
+    }
+
+    const sheetInfo = await getOrCreateGoogleSheet(accessToken);
+    if (!sheetInfo) {
+      return res.status(500).json({ error: 'No fue posible acceder ni crear la hoja de cálculo en Google Sheets.' });
+    }
+
+    return res.json({
+      spreadsheetId: sheetInfo.id,
+      spreadsheetUrl: sheetInfo.url,
+    });
+  } catch (error: unknown) {
+    console.error('[Get-Or-Create-Sheet Fatal Error]:', error);
+    return res.status(500).json({ error: 'Fallo al procesar la solicitud de Google Sheets.' });
+  }
+});
+
 app.post('/api/workspace/sync-booking', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
@@ -246,9 +445,19 @@ app.post('/api/workspace/sync-booking', async (req: Request, res: Response) => {
       hash: escapeHtml(booking.hash || 'SHA256: VALIDATED'),
     };
 
-    // Usar ID de hoja configurado en entorno prioritariamente para evitar round-trips a Drive
+    // Usar ID de hoja configurado o buscar/crear automáticamente en Google Drive
     let spreadsheetId = process.env.GOOGLE_SHEET_ID || booking.spreadsheetId || null;
-    const sheetTabName = 'Diagnosticos';
+    if (!spreadsheetId) {
+      try {
+        const autoSheet = await getOrCreateGoogleSheet(accessToken);
+        if (autoSheet) {
+          spreadsheetId = autoSheet.id;
+        }
+      } catch (e) {
+        console.warn('[Sync-Booking] Could not resolve sheet automatically:', e);
+      }
+    }
+    const sheetTabName = SHEET_TAB_NAME;
 
     // Registro en Google Sheets
     let sheetSuccess = false;

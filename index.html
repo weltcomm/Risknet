@@ -152,17 +152,32 @@
       .animate-pulse-glow {
         animation: pulseGlow 2.5s ease-in-out infinite;
       }
+      /* Mobile touch & viewport optimizations */
+      html, body {
+        overflow-x: hidden;
+        width: 100%;
+        max-width: 100vw;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
     </style>
   </head>
 
-  <body class="min-h-screen bg-brand-bg text-brand-silver antialiased selection:bg-brand-cyan selection:text-brand-bg flex flex-col justify-between">
+  <body class="min-h-screen bg-brand-bg text-brand-silver antialiased selection:bg-brand-cyan selection:text-brand-bg flex flex-col justify-between w-full max-w-full overflow-x-hidden pb-16 lg:pb-0">
     
-    <!-- TOP UTILITY STATUS RIBBON (Exact from screenshots) -->
-    <div class="bg-brand-surface/90 border-b border-brand-border text-[11px] font-mono text-brand-muted py-1.5 px-4 sm:px-8 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-4">
-        <div class="flex items-center gap-2">
+    <!-- TOP UTILITY STATUS RIBBON (Compact and touch-friendly on mobile) -->
+    <div class="bg-brand-surface/90 border-b border-brand-border text-[10px] sm:text-[11px] font-mono text-brand-muted py-1.5 px-3 sm:px-8 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+      <div class="flex items-center gap-2 sm:gap-4 flex-wrap">
+        <div class="flex items-center gap-1.5 sm:gap-2">
           <span class="w-2 h-2 rounded-full bg-brand-emerald animate-pulse-glow"></span>
-          <span class="text-brand-pure font-semibold tracking-wider">OPERATIONAL RESILIENCE GRID</span>
+          <span class="text-brand-pure font-semibold tracking-wider text-[9px] sm:text-[11px]">RESILIENCE GRID</span>
         </div>
         <span class="hidden md:inline text-brand-border">|</span>
         <div class="hidden sm:flex items-center gap-3">
@@ -174,37 +189,37 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-4 text-[10px] sm:text-[11px]">
-        <div class="flex items-center gap-1.5">
-          <svg class="w-3.5 h-3.5 text-brand-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="flex items-center gap-2 sm:gap-4 text-[9px] sm:text-[11px]">
+        <div class="flex items-center gap-1 sm:gap-1.5">
+          <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
           </svg>
-          <span class="text-brand-pure">SECURE PGP NODE</span>
+          <span class="text-brand-pure">SECURE PGP</span>
         </div>
         <span class="text-brand-border">|</span>
-        <div class="flex items-center gap-1.5 text-brand-emerald">
+        <div class="flex items-center gap-1 sm:gap-1.5 text-brand-emerald">
           <span class="w-1.5 h-1.5 rounded-full bg-brand-emerald"></span>
-          <span>ISO/IEC 27001 AUDITED</span>
+          <span>ISO 27001</span>
         </div>
       </div>
     </div>
 
-    <!-- MAIN NAVIGATION BAR (Top Bar Contract: 3 zones, 1 row) -->
+    <!-- MAIN NAVIGATION BAR (Top Bar Contract: Responsive 3 zones) -->
     <header class="sticky top-0 z-50 bg-brand-bg/95 backdrop-blur-md border-b border-brand-border">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-8">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-3 sm:gap-8">
         
-        <!-- Zone 1: Single text element wordmark with shield emblem -->
-        <a href="#inicio" onclick="switchView('inicio')" class="flex items-center gap-3 text-brand-pure font-chakra font-bold text-xl tracking-tight whitespace-nowrap shrink-0 group focus:outline-none" aria-label="Risknet Home">
-          <div class="relative w-10 h-10 flex items-center justify-center shrink-0">
+        <!-- Zone 1: Wordmark with shield emblem -->
+        <a href="#inicio" onclick="switchView('inicio')" class="flex items-center gap-2 sm:gap-3 text-brand-pure font-chakra font-bold text-lg sm:text-xl tracking-tight whitespace-nowrap shrink-0 group focus:outline-none" aria-label="Risknet Home">
+          <div class="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shrink-0">
             <img src="/assets/aistudio/Favicon_Risknet_8af34ad9.png" alt="Risknet Logo" class="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(0,216,255,0.6)] transition-transform duration-200 group-hover:scale-105" />
           </div>
           <div class="flex flex-col">
-            <span class="text-brand-pure tracking-wider font-bold text-lg leading-tight">RISK<span class="text-brand-cyan">NET</span></span>
-            <span class="text-[9px] font-mono tracking-widest text-brand-muted">GRC // CYBER DEFENSE</span>
+            <span class="text-brand-pure tracking-wider font-bold text-base sm:text-lg leading-tight">RISK<span class="text-brand-cyan">NET</span></span>
+            <span class="text-[8px] sm:text-[9px] font-mono tracking-widest text-brand-muted">GRC // CYBER DEFENSE</span>
           </div>
         </a>
 
-        <!-- Zone 2: 5 clean navigation links, single-line text -->
+        <!-- Zone 2: Desktop navigation links, single-line text -->
         <nav class="hidden lg:flex items-center gap-6 text-xs font-mono tracking-wide" aria-label="Navegación principal">
           <button onclick="switchView('inicio')" id="nav-btn-inicio" class="nav-link-item px-3 py-1.5 border border-brand-cyan text-brand-cyan bg-brand-surface/80 rounded-sm transition-all whitespace-nowrap shrink-0">
             Inicio
@@ -227,12 +242,13 @@
         </nav>
 
         <!-- Zone 3: 1 primary action CTA + mobile toggle -->
-        <div class="flex items-center gap-3 shrink-0">
-          <button onclick="switchView('contacto'); scrollToForm();" class="inline-flex items-center justify-center gap-2 bg-brand-cyan text-brand-bg px-5 py-2.5 font-chakra font-bold text-xs uppercase tracking-wider rounded-sm border border-brand-cyan hover:bg-brand-cyan-bright transition-all shadow-cyan-glow hover:shadow-cyan-glow-lg whitespace-nowrap focus:outline-none">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+          <button onclick="switchView('contacto'); scrollToForm();" class="inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-brand-cyan text-brand-bg px-3 py-2 sm:px-5 sm:py-2.5 font-chakra font-bold text-[11px] sm:text-xs uppercase tracking-wider rounded-sm border border-brand-cyan hover:bg-brand-cyan-bright transition-all shadow-cyan-glow hover:shadow-cyan-glow-lg whitespace-nowrap focus:outline-none min-h-[44px]">
+            <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
-            <span>AGENDAR DIAGNÓSTICO</span>
+            <span class="hidden sm:inline">AGENDAR DIAGNÓSTICO</span>
+            <span class="sm:hidden">AGENDAR</span>
           </button>
           
           <!-- Avatar Icon Button (Exact from screenshot) -->
@@ -242,8 +258,8 @@
             </svg>
           </div>
 
-          <!-- Mobile Menu Button -->
-          <button id="mobile-menu-toggle" type="button" class="lg:hidden text-brand-silver hover:text-brand-cyan p-2 border border-brand-border hover:border-brand-cyan" aria-label="Abrir menú">
+          <!-- Mobile Menu Button with 44x44px touch hitbox -->
+          <button id="mobile-menu-toggle" type="button" class="lg:hidden text-brand-silver hover:text-brand-cyan p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center border border-brand-border hover:border-brand-cyan transition-colors" aria-label="Abrir menú de navegación">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
@@ -253,16 +269,47 @@
       </div>
 
       <!-- Mobile Dropdown Navigation -->
-      <div id="mobile-menu" class="hidden lg:hidden bg-brand-surface border-b border-brand-border px-4 pt-3 pb-6 space-y-2 font-mono text-xs">
-        <button onclick="switchView('inicio'); toggleMobileMenu();" class="block w-full text-left py-2 text-brand-silver hover:text-brand-cyan border-b border-brand-border/40">Inicio</button>
-        <button onclick="switchView('servicios'); toggleMobileMenu();" class="block w-full text-left py-2 text-brand-silver hover:text-brand-cyan border-b border-brand-border/40">Servicios</button>
-        <button onclick="switchView('plataforma'); toggleMobileMenu();" class="block w-full text-left py-2 text-brand-silver hover:text-brand-cyan border-b border-brand-border/40">Plataforma GRC</button>
-        <button onclick="switchView('metodologia'); toggleMobileMenu();" class="block w-full text-left py-2 text-brand-silver hover:text-brand-cyan border-b border-brand-border/40">Nosotros & Acreditaciones</button>
-        <button onclick="switchView('blog'); toggleMobileMenu();" class="block w-full text-left py-2 text-brand-silver hover:text-brand-cyan border-b border-brand-border/40">Blog Técnico</button>
-        <button onclick="switchView('contacto'); toggleMobileMenu();" class="block w-full text-left py-2 text-brand-silver hover:text-brand-cyan border-b border-brand-border/40">Contacto</button>
-        <button onclick="switchView('contacto'); toggleMobileMenu(); scrollToForm();" class="block w-full text-center bg-brand-cyan text-brand-bg font-chakra font-bold py-3 mt-4 uppercase">
-          Agendar Diagnóstico Inicial
+      <div id="mobile-menu" class="hidden lg:hidden bg-brand-surface/98 backdrop-blur-md border-b border-brand-border px-4 pt-3 pb-6 space-y-1 font-mono text-xs shadow-2xl">
+        <button onclick="switchView('inicio'); toggleMobileMenu();" class="flex items-center justify-between w-full min-h-[44px] px-3 text-left text-brand-silver hover:text-brand-cyan hover:bg-brand-card/60 transition-colors border-b border-brand-border/40 font-chakra text-sm">
+          <span>Inicio</span>
+          <span class="text-brand-muted text-xs font-mono">01 //</span>
         </button>
+        <button onclick="switchView('servicios'); toggleMobileMenu();" class="flex items-center justify-between w-full min-h-[44px] px-3 text-left text-brand-silver hover:text-brand-cyan hover:bg-brand-card/60 transition-colors border-b border-brand-border/40 font-chakra text-sm">
+          <span>Servicios</span>
+          <span class="text-brand-muted text-xs font-mono">02 //</span>
+        </button>
+        <button onclick="switchView('plataforma'); toggleMobileMenu();" class="flex items-center justify-between w-full min-h-[44px] px-3 text-left text-brand-silver hover:text-brand-cyan hover:bg-brand-card/60 transition-colors border-b border-brand-border/40 font-chakra text-sm">
+          <span>Plataforma GRC</span>
+          <span class="text-brand-muted text-xs font-mono">03 //</span>
+        </button>
+        <button onclick="switchView('metodologia'); toggleMobileMenu();" class="flex items-center justify-between w-full min-h-[44px] px-3 text-left text-brand-silver hover:text-brand-cyan hover:bg-brand-card/60 transition-colors border-b border-brand-border/40 font-chakra text-sm">
+          <span>Nosotros & Acreditaciones</span>
+          <span class="text-brand-muted text-xs font-mono">04 //</span>
+        </button>
+        <button onclick="switchView('blog'); toggleMobileMenu();" class="flex items-center justify-between w-full min-h-[44px] px-3 text-left text-brand-silver hover:text-brand-cyan hover:bg-brand-card/60 transition-colors border-b border-brand-border/40 font-chakra text-sm">
+          <span>Blog Técnico</span>
+          <span class="text-brand-muted text-xs font-mono">05 //</span>
+        </button>
+        <button onclick="switchView('contacto'); toggleMobileMenu();" class="flex items-center justify-between w-full min-h-[44px] px-3 text-left text-brand-silver hover:text-brand-cyan hover:bg-brand-card/60 transition-colors border-b border-brand-border/40 font-chakra text-sm">
+          <span>Contacto Directo CISO</span>
+          <span class="text-brand-muted text-xs font-mono">06 //</span>
+        </button>
+
+        <div class="pt-3 flex flex-col gap-2">
+          <button onclick="switchView('contacto'); toggleMobileMenu(); scrollToForm();" class="w-full text-center bg-brand-cyan text-brand-bg font-chakra font-bold py-3 uppercase min-h-[48px] flex items-center justify-center gap-2 rounded-sm shadow-cyan-glow">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <span>Agendar Diagnóstico Inicial</span>
+          </button>
+          
+          <div class="grid grid-cols-2 gap-2 pt-2 text-[10px] font-mono">
+            <a href="tel:5055657836" class="p-2.5 bg-brand-card border border-brand-border text-center text-brand-silver hover:text-brand-cyan block">
+              US: (505) 565-7836
+            </a>
+            <a href="tel:+573012483308" class="p-2.5 bg-brand-card border border-brand-border text-center text-brand-silver hover:text-brand-cyan block">
+              COL: +57 301 248 3308
+            </a>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -320,16 +367,16 @@
                 </div>
 
                 <!-- 3 Pillars strip below CTA -->
-                <div class="mt-10 pt-6 border-t border-brand-border/60 grid grid-cols-3 gap-4 text-xs font-mono">
-                  <div>
+                <div class="mt-8 sm:mt-10 pt-6 border-t border-brand-border/60 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs font-mono">
+                  <div class="p-2 sm:p-0 bg-brand-surface/40 sm:bg-transparent border border-brand-border/40 sm:border-0 rounded-sm">
                     <span class="text-brand-muted block text-[10px] uppercase">ACREDITACIÓN</span>
                     <span class="text-brand-pure font-bold font-chakra text-sm sm:text-base">100% C-Level Ready</span>
                   </div>
-                  <div>
+                  <div class="p-2 sm:p-0 bg-brand-surface/40 sm:bg-transparent border border-brand-border/40 sm:border-0 rounded-sm">
                     <span class="text-brand-muted block text-[10px] uppercase">SLA DE RESPUESTA</span>
                     <span class="text-brand-cyan font-bold font-chakra text-sm sm:text-base">&lt; 15 Min Incidentes</span>
                   </div>
-                  <div>
+                  <div class="p-2 sm:p-0 bg-brand-surface/40 sm:bg-transparent border border-brand-border/40 sm:border-0 rounded-sm">
                     <span class="text-brand-muted block text-[10px] uppercase">METODOLOGÍA</span>
                     <span class="text-brand-pure font-bold font-chakra text-sm sm:text-base">Continuous Posture</span>
                   </div>
@@ -494,7 +541,7 @@
             </div>
 
             <!-- 4 Big Metric Strip (Screenshot 4) -->
-            <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               <div class="p-5 bg-brand-surface border border-brand-border">
                 <span class="text-[10px] font-mono text-brand-muted uppercase block">AUDITORÍAS SUPERADAS</span>
                 <span class="text-3xl font-chakra font-bold text-brand-cyan tabular-nums block mt-1">100%</span>
@@ -819,7 +866,7 @@
             </p>
 
             <!-- 4 Metrics Bar (Screenshot 1) -->
-            <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-brand-border">
+            <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 pt-6 border-t border-brand-border">
               <div class="p-4 bg-brand-surface border border-brand-border">
                 <span class="text-[10px] font-mono text-brand-muted uppercase block">TIEMPO MEDIO A CERTIFICACIÓN</span>
                 <span class="text-2xl sm:text-3xl font-chakra font-bold text-brand-cyan tabular-nums block mt-1">4.2 Meses</span>
@@ -1166,7 +1213,7 @@
               </div>
 
               <div class="overflow-x-auto border border-brand-border bg-brand-surface rounded-sm">
-                <table class="w-full text-left text-xs font-mono">
+                <table class="w-full min-w-[620px] text-left text-xs font-mono">
                   <thead>
                     <tr class="border-b border-brand-border bg-brand-card text-[11px] text-brand-muted uppercase">
                       <th class="p-4 w-1/4">DIMENSIÓN ESTRATÉGICA</th>
@@ -1239,7 +1286,7 @@
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <!-- Platform Sub-Nav Modules -->
-            <div class="flex flex-wrap items-center gap-2 border-b border-brand-border pb-4 mb-8 text-xs font-mono">
+            <div class="flex items-center gap-2 border-b border-brand-border pb-4 mb-8 text-xs font-mono overflow-x-auto no-scrollbar whitespace-nowrap">
               <span class="text-brand-muted text-[10px] mr-2">MÓDULOS DE CONTROL:</span>
               <button onclick="switchPlatformModule('riesgos')" id="mod-tab-riesgos" class="px-3 py-1.5 bg-brand-card border border-brand-cyan text-brand-cyan font-semibold flex items-center gap-1.5">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
@@ -1455,7 +1502,7 @@
                 </div>
 
                 <!-- Console Sub-Tabs -->
-                <div class="flex items-center gap-1 bg-brand-card p-1 border border-brand-border text-xs font-mono">
+                <div class="flex items-center gap-1 bg-brand-card p-1 border border-brand-border text-[11px] sm:text-xs font-mono overflow-x-auto no-scrollbar whitespace-nowrap">
                   <button onclick="switchConsoleTab('general')" id="console-tab-general" class="px-3 py-1 bg-brand-cyan text-brand-bg font-bold">VISTA GENERAL</button>
                   <button onclick="switchConsoleTab('heatmap')" id="console-tab-heatmap" class="px-3 py-1 text-brand-muted hover:text-brand-pure">MATRIZ HEATMAP</button>
                   <button onclick="switchConsoleTab('incidentes')" id="console-tab-incidentes" class="px-3 py-1 text-brand-muted hover:text-brand-pure">INCIDENTES & TAREAS</button>
@@ -2033,7 +2080,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               
               <!-- Left Form Column -->
-              <div id="booking-form-container" class="lg:col-span-7 bg-brand-surface border border-brand-border p-6 sm:p-8 rounded-sm shadow-xl">
+              <div id="booking-form-container" class="lg:col-span-7 bg-brand-surface border border-brand-border p-4 sm:p-8 rounded-sm shadow-xl">
                 
                 <div class="flex items-center justify-between border-b border-brand-border pb-4 mb-6">
                   <div class="flex items-center gap-3">
@@ -2928,9 +2975,49 @@
       </div>
     </footer>
 
+    <!-- MOBILE BOTTOM NAVIGATION ANCHOR (Thumb-Zone Ergonomics Pattern 1) -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-brand-surface/95 backdrop-blur-md border-t border-brand-border px-1 py-1 flex items-center justify-around shadow-[0_-5px_20px_rgba(0,0,0,0.6)]" aria-label="Navegación móvil">
+      <button onclick="switchView('inicio')" id="mobile-tab-inicio" class="flex flex-col items-center justify-center py-1 px-2 text-brand-cyan min-h-[48px] min-w-[48px] focus:outline-none transition-colors cursor-pointer">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+        <span class="text-[9px] font-chakra uppercase font-bold tracking-tight">Inicio</span>
+      </button>
+
+      <button onclick="switchView('servicios')" id="mobile-tab-servicios" class="flex flex-col items-center justify-center py-1 px-2 text-brand-muted hover:text-brand-silver min-h-[48px] min-w-[48px] focus:outline-none transition-colors cursor-pointer">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        <span class="text-[9px] font-chakra uppercase font-bold tracking-tight">Servicios</span>
+      </button>
+
+      <button onclick="switchView('plataforma')" id="mobile-tab-plataforma" class="flex flex-col items-center justify-center py-1 px-2 text-brand-muted hover:text-brand-silver min-h-[48px] min-w-[48px] focus:outline-none transition-colors cursor-pointer">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        <span class="text-[9px] font-chakra uppercase font-bold tracking-tight">vGRC</span>
+      </button>
+
+      <button onclick="switchView('metodologia')" id="mobile-tab-metodologia" class="flex flex-col items-center justify-center py-1 px-2 text-brand-muted hover:text-brand-silver min-h-[48px] min-w-[48px] focus:outline-none transition-colors cursor-pointer">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        <span class="text-[9px] font-chakra uppercase font-bold tracking-tight">Nosotros</span>
+      </button>
+
+      <button onclick="switchView('contacto'); scrollToForm();" id="mobile-tab-contacto" class="flex flex-col items-center justify-center py-1 px-2 text-brand-cyan min-h-[48px] min-w-[48px] focus:outline-none transition-colors cursor-pointer">
+        <div class="w-6 h-6 rounded-full bg-brand-cyan/20 border border-brand-cyan flex items-center justify-center mb-0.5">
+          <svg class="w-3.5 h-3.5 text-brand-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <span class="text-[9px] font-chakra uppercase font-bold tracking-tight text-brand-pure">Agendar</span>
+      </button>
+    </nav>
+
     <!-- MODAL: Consola Administrativa Google Workspace (Solo Admin con Contraseña) -->
-    <div id="admin-workspace-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4" role="dialog" aria-modal="true">
-      <div class="bg-brand-surface border border-brand-cyan max-w-xl w-full p-6 font-mono text-xs shadow-2xl relative max-h-[90vh] overflow-y-auto">
+    <div id="admin-workspace-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true">
+      <div class="bg-brand-surface border border-brand-cyan max-w-xl w-full p-4 sm:p-6 font-mono text-xs shadow-2xl relative max-h-[92vh] overflow-y-auto rounded-sm">
         <div class="flex justify-between items-center border-b border-brand-border pb-3 mb-4">
           <div class="flex items-center gap-2">
             <span id="admin-modal-pulse-dot" class="w-2.5 h-2.5 rounded-full bg-brand-cyan animate-pulse"></span>
@@ -3438,8 +3525,8 @@ R3T2Y1U0I9O8P7a6S5D4F3G2H1J0K9L8Z7X6C5V4B3N2M1l0k9j8h7g6f5d4s3a2
       </div>
     </div>
 
-    <!-- ASISTENTE VIRTUAL: Floating Button Trigger -->
-    <div id="ai-advisor-trigger-container" class="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40 flex items-center gap-3">
+    <!-- ASISTENTE VIRTUAL: Floating Button Trigger (Resting above mobile bottom bar) -->
+    <div id="ai-advisor-trigger-container" class="fixed bottom-20 right-3 sm:bottom-6 sm:right-6 z-40 flex items-center gap-3">
       <!-- Tooltip prompt badge -->
       <div id="ai-advisor-badge" class="hidden sm:flex items-center gap-2 bg-brand-surface border border-brand-cyan px-3 py-1.5 rounded-sm shadow-cyan-glow text-[11px] font-mono cursor-pointer transition-transform hover:scale-105" onclick="toggleAiAdvisor()">
         <span class="w-2 h-2 rounded-full bg-brand-emerald animate-pulse"></span>
@@ -3447,8 +3534,8 @@ R3T2Y1U0I9O8P7a6S5D4F3G2H1J0K9L8Z7X6C5V4B3N2M1l0k9j8h7g6f5d4s3a2
         <span class="text-brand-cyan">· Orientación GRC</span>
       </div>
 
-      <!-- Main Button -->
-      <button type="button" onclick="toggleAiAdvisor()" id="ai-advisor-fab" aria-label="Abrir Asistente Virtual Risknet" class="w-14 h-14 rounded-full bg-brand-surface border-2 border-brand-cyan text-brand-cyan flex items-center justify-center hover:bg-brand-cyan hover:text-brand-bg transition-all duration-300 shadow-cyan-glow group relative cursor-pointer">
+      <!-- Main Button with 56x56 touch area -->
+      <button type="button" onclick="toggleAiAdvisor()" id="ai-advisor-fab" aria-label="Abrir Asistente Virtual Risknet" class="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-brand-surface border-2 border-brand-cyan text-brand-cyan flex items-center justify-center hover:bg-brand-cyan hover:text-brand-bg transition-all duration-300 shadow-cyan-glow group relative cursor-pointer min-h-[48px] min-w-[48px]">
         <span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-brand-emerald border-2 border-brand-bg animate-pulse"></span>
         <!-- Bot / Shield Icon -->
         <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3457,8 +3544,8 @@ R3T2Y1U0I9O8P7a6S5D4F3G2H1J0K9L8Z7X6C5V4B3N2M1l0k9j8h7g6f5d4s3a2
       </button>
     </div>
 
-    <!-- ASISTENTE VIRTUAL: Interactive Drawer Window -->
-    <div id="ai-advisor-drawer" class="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 w-[95vw] sm:w-[420px] h-[580px] max-h-[85vh] z-50 flex flex-col bg-brand-surface border border-brand-cyan shadow-[0_0_35px_rgba(0,216,255,0.35)] rounded-sm overflow-hidden hidden transition-all duration-300">
+    <!-- ASISTENTE VIRTUAL: Interactive Drawer Window (Full-height sheet on mobile) -->
+    <div id="ai-advisor-drawer" class="fixed inset-x-2 bottom-2 top-14 sm:top-auto sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[420px] sm:h-[580px] max-h-[92vh] z-50 flex flex-col bg-brand-surface border border-brand-cyan shadow-[0_0_35px_rgba(0,216,255,0.35)] rounded-sm overflow-hidden hidden transition-all duration-300">
       
       <!-- Drawer Header -->
       <div class="p-3.5 bg-brand-card border-b border-brand-border flex items-center justify-between shrink-0">
@@ -3566,6 +3653,23 @@ R3T2Y1U0I9O8P7a6S5D4F3G2H1J0K9L8Z7X6C5V4B3N2M1l0k9j8h7g6f5d4s3a2
             }
           }
         });
+
+        // Sync mobile bottom tab active states
+        const mobileTabs = ['inicio', 'servicios', 'plataforma', 'metodologia', 'contacto'];
+        mobileTabs.forEach(t => {
+          const mBtn = document.getElementById(`mobile-tab-${t}`);
+          if (mBtn) {
+            if (t === viewName) {
+              mBtn.classList.remove('text-brand-muted', 'text-brand-silver');
+              mBtn.classList.add('text-brand-cyan');
+            } else {
+              mBtn.classList.remove('text-brand-cyan');
+              mBtn.classList.add('text-brand-muted');
+            }
+          }
+        });
+
+        toggleMobileMenu();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
