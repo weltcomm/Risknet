@@ -1,1 +1,71 @@
 @import "tailwindcss";
+/* =========================================================
+   RISKNET: MOBILE RESPONSIVE ENGINE & ASSET CLAMPING
+   ========================================================= */
+
+/* 1. Neutralización estricta de desbordamiento horizontal */
+html,
+body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+/* 2. Control atómico de tamaño para imágenes y gráficos vectoriales */
+img,
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 3. Bloqueo estricto del tamaño de íconos en botones interactivos */
+button svg,
+button img,
+a svg,
+a img {
+  width: 1.25rem !important;  /* 20px */
+  height: 1.25rem !important; /* 20px */
+  max-width: 1.25rem !important;
+  max-height: 1.25rem !important;
+  min-width: 1.25rem !important;
+  min-height: 1.25rem !important;
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+}
+
+/* 4. Adaptación para pantallas móviles y tablets (Viewport < 1024px) */
+@media screen and (max-width: 1024px) {
+  /* Apilado vertical de botones de llamada a la acción */
+  button,
+  a[role="button"],
+  a[class*="btn"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    padding: 0.85rem 1rem !important;
+  }
+
+  /* Reducción fluida de títulos principales */
+  h1 {
+    font-size: clamp(1.75rem, 6vw, 2.4rem) !important;
+    line-height: 1.2 !important;
+    word-break: break-word;
+  }
+
+  /* Evitar desbordamiento de contenedores de telemetría y badges */
+  [class*="telemetry"],
+  [class*="badge"],
+  [class*="grid"] {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+}
