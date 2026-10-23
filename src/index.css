@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* =========================================================
-   RISKNET: MOBILE RESPONSIVE ENGINE & ASSET CLAMPING
+   RISKNET: REGLAS MAESTRAS DE CONTENCIÓN Y ADAPTACIÓN MÓVIL
    ========================================================= */
 
 /* 1. Neutralización estricta de desbordamiento horizontal */
@@ -11,6 +11,9 @@ html,
 body {
   overflow-x: hidden !important;
   max-width: 100vw !important;
+  width: 100% !important;
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -20,18 +23,21 @@ body {
   box-sizing: inherit;
 }
 
-/* 2. Control atómico de tamaño para imágenes y gráficos vectoriales */
+/* 2. Contención universal: ninguna imagen ni SVG puede salirse de su contenedor */
 img,
-svg {
+svg,
+picture {
   max-width: 100%;
   height: auto;
 }
 
-/* 3. Bloqueo estricto del tamaño de íconos en botones interactivos */
+/* 3. Bloqueo estricto del tamaño de íconos gigantes en botones y llamadas a la acción */
 button svg,
 button img,
 a svg,
-a img {
+a img,
+.btn svg,
+.btn img {
   width: 1.25rem !important;  /* 20px */
   height: 1.25rem !important; /* 20px */
   max-width: 1.25rem !important;
@@ -40,13 +46,18 @@ a img {
   min-height: 1.25rem !important;
   flex-shrink: 0 !important;
   display: inline-block !important;
+  vertical-align: middle !important;
+  background: transparent !important;
 }
 
-/* 4. Adaptación para pantallas móviles y tablets (Viewport < 1024px) */
+/* 4. Adaptación para pantallas de teléfonos y tablets (< 1024px) */
 @media screen and (max-width: 1024px) {
+  /* Apilado fluido y ancho completo para botones CTA */
   button,
   a[role="button"],
-  a[class*="btn"] {
+  a[class*="btn"],
+  a[href*="diagnostico"],
+  a[href*="vgrc"] {
     width: 100% !important;
     max-width: 100% !important;
     display: flex !important;
@@ -56,16 +67,37 @@ a img {
     padding: 0.85rem 1rem !important;
   }
 
+  /* Asegurar que el contenedor de los botones los organice en columna vertical */
+  div:has(> a[href*="diagnostico"]),
+  div:has(> button) {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Tipografía fluida para títulos en pantallas pequeñas */
   h1 {
-    font-size: clamp(1.75rem, 6vw, 2.4rem) !important;
+    font-size: clamp(1.65rem, 6vw, 2.25rem) !important;
     line-height: 1.2 !important;
     word-break: break-word;
   }
 
+  /* Control de tamaño en los logos y escudos superiores */
+  header img,
+  header svg,
+  nav img,
+  nav svg {
+    max-height: 40px !important;
+    width: auto !important;
+  }
+
+  /* Tarjetas de telemetría y métricas contenidas al 100% del ancho */
   [class*="telemetry"],
-  [class*="badge"],
+  [class*="card"],
   [class*="grid"] {
     max-width: 100% !important;
+    width: 100% !important;
     overflow-x: hidden !important;
   }
 }
