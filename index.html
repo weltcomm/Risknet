@@ -3,70 +3,132 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style id="risknet-mobile-shield">
-  /* 1. Neutralización de desbordamiento horizontal */
-  html, body {
-    overflow-x: hidden !important;
-    max-width: 100vw !important;
-    width: 100% !important;
-  }
+    <!-- ===================================================================
+         RISKNET ENTERPRISE RESPONSIVE CORE SHIELD (OWASP & WPO COMPLIANT)
+         =================================================================== -->
+    <style id="risknet-core-responsive-engine">
+      /* 1. Neutralización absoluta de desbordamiento horizontal */
+      html, body {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        background-color: #030712 !important;
+        -webkit-text-size-adjust: 100% !important;
+      }
 
-  /* 2. CONTENCIÓN ESTRICTA: Reducción obligatoria de vectores gigantes en botones y Hero */
-  a svg, 
-  button svg, 
-  .btn svg,
-  div:has(> span) > svg {
-    width: 20px !important;
-    height: 20px !important;
-    max-width: 20px !important;
-    max-height: 20px !important;
-    min-width: 20px !important;
-    min-height: 20px !important;
-    flex-shrink: 0 !important;
-    display: inline-block !important;
-    background: transparent !important;
-  }
+      *, *::before, *::after {
+        box-sizing: inherit !important;
+      }
 
-  /* 3. Normalización de fondos blancos accidentales en botones */
-  a:has(svg), 
-  button:has(svg) {
-    background-color: transparent;
-  }
+      /* 2. Contención estricta de vectores: elimina íconos colosales de 400px */
+      svg {
+        max-width: 44px !important;
+        max-height: 44px !important;
+        height: auto !important;
+        display: inline-block !important;
+      }
 
-  /* 4. Adaptación a una columna para pantallas móviles (< 1024px) */
-  @media screen and (max-width: 1024px) {
-    /* Apila los botones de llamada a la acción en vertical */
-    div:has(> a[href*="diagnostico"]),
-    div:has(> a[href*="vgrc"]) {
-      display: flex !important;
-      flex-direction: column !important;
-      width: 100% !important;
-      gap: 0.75rem !important;
-    }
+      /* 3. Íconos de acción táctil en botones, cabecera y enlaces interactivos */
+      button svg,
+      button img,
+      a svg,
+      a img,
+      .btn svg,
+      nav svg,
+      header svg {
+        width: 20px !important;
+        height: 20px !important;
+        max-width: 20px !important;
+        max-height: 20px !important;
+        min-width: 20px !important;
+        min-height: 20px !important;
+        flex-shrink: 0 !important;
+        background: transparent !important;
+        vertical-align: middle !important;
+      }
 
-    /* Botones CTA en móvil a ancho completo con altura táctil ergonómica */
-    a[href*="diagnostico"],
-    a[href*="vgrc"] {
-      width: 100% !important;
-      max-width: 100% !important;
-      min-height: 48px !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      padding: 0.75rem 1rem !important;
-      box-sizing: border-box !important;
-    }
+      /* 4. Escudo corporativo en cabecera y logotipos */
+      header img,
+      nav img {
+        max-height: 40px !important;
+        width: auto !important;
+      }
 
-    /* Reducción proporcional de escudos de seguridad e insignias */
-    header svg, 
-    nav svg,
-    header img, 
-    nav img {
-      max-height: 38px !important;
-      width: auto !important;
-    }
-  }
-</style>
+      /* 5. Adaptación responsive para dispositivos móviles y tablets (< 1024px) */
+      @media screen and (max-width: 1024px) {
+        /* Estructuración semántica de secciones con separadores sutiles */
+        section {
+          padding: 2.25rem 1rem !important;
+          border-bottom: 1px solid rgba(30, 41, 59, 0.7) !important;
+        }
+
+        /* Reconfiguración de botones del Hero a ancho completo apilados */
+        div:has(> a[href*="diagnostico"]),
+        div:has(> a[href*="vgrc"]) {
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 0.85rem !important;
+          width: 100% !important;
+          margin-top: 1.5rem !important;
+        }
+
+        a[href*="diagnostico"],
+        a[href*="vgrc"],
+        button {
+          width: 100% !important;
+          min-height: 48px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 0.75rem 1.25rem !important;
+          text-align: center !important;
+        }
+
+        /* Tipografía fluida para títulos principales */
+        h1 {
+          font-size: clamp(1.65rem, 6.5vw, 2.3rem) !important;
+          line-height: 1.25 !important;
+          margin-bottom: 1rem !important;
+          word-break: break-word !important;
+        }
+
+        h2 {
+          font-size: clamp(1.35rem, 5vw, 1.75rem) !important;
+          line-height: 1.3 !important;
+          margin-bottom: 0.75rem !important;
+        }
+
+        p {
+          font-size: 0.95rem !important;
+          line-height: 1.6 !important;
+          color: #94a3b8 !important;
+        }
+
+        /* Tarjetas Bento y módulos con borde y separación visual */
+        div[class*="border"],
+        div:has(> h3) {
+          border: 1px solid rgba(51, 65, 85, 0.5) !important;
+          border-radius: 0.5rem !important;
+          padding: 1.25rem !important;
+          margin-bottom: 1rem !important;
+          background: rgba(15, 23, 42, 0.6) !important;
+        }
+
+        /* Contenedores de telemetría, matrices y tablas */
+        table,
+        div:has(> table),
+        [class*="telemetry"],
+        [class*="radar"] {
+          width: 100% !important;
+          max-width: 100% !important;
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+        }
+      }
+    </style>
     <title>Risknet | GRC, Ciberseguridad Defensiva, ISO 27001:2022 y NIST CSF 2.0</title>
     <meta name="description" content="Risknet: Consultoría estratégica y plataforma vGRC para organizaciones que requieren rigor normativo, resiliencia operativa y protección de activos digitales críticos en EE. UU. y Colombia." />
     <meta name="keywords" content="Risknet, GRC, Ciberseguridad, ISO 27001 2022, NIST CSF 2.0, vGRC, Auditoría Interna, CISO as a Service, Albuquerque, Colombia" />
