@@ -1,5 +1,75 @@
 <!doctype html>
 <html lang="es" class="scroll-smooth">
+  <!-- =========================================================
+         BLINDAJE DE CONTENCIÓN RESPONSIVA & MOBILE-FIRST (RISKNET)
+         ========================================================= -->
+    <style>
+      /* 1. Neutralización de desbordamiento horizontal global */
+      html, body {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      *, *::before, *::after {
+        box-sizing: inherit;
+      }
+
+      /* 2. Regla de contención para cualquier SVG o imagen en la aplicación */
+      img, svg, picture {
+        max-width: 100%;
+        height: auto;
+      }
+
+      /* 3. Bloqueo estricto del tamaño de íconos gigantes en botones CTA */
+      button svg,
+      button img,
+      a svg,
+      a img {
+        width: 1.25rem !important;  /* 20px */
+        height: 1.25rem !important; /* 20px */
+        max-width: 1.25rem !important;
+        max-height: 1.25rem !important;
+        flex-shrink: 0 !important;
+        display: inline-block !important;
+      }
+
+      /* 4. Adaptación del Hero y Grids para teléfonos y tablets (< 1024px) */
+      @media screen and (max-width: 1024px) {
+        /* Fuerza a que los botones CTA se apilen verticalmente y ocupen el ancho completo */
+        button, 
+        a[class*="btn"], 
+        div[class*="button"] {
+          max-width: 100% !important;
+        }
+
+        /* Si los botones están dentro de un contenedor flex horizontal, apilarlos */
+        div:has(> button),
+        div:has(> a[href*="diagnostico"]),
+        div:has(> a[href*="vgrc"]) {
+          flex-direction: column !important;
+          align-items: stretch !important;
+          width: 100% !important;
+        }
+
+        /* Reajuste de títulos para evitar saltos de línea antiestéticos */
+        h1 {
+          font-size: clamp(1.8rem, 7vw, 2.8rem) !important;
+          line-height: 1.15 !important;
+          word-break: break-word;
+        }
+
+        /* Contenedores de tarjetas de telemetría y logos a escala 100% */
+        div[class*="telemetry"],
+        div[class*="radar"],
+        div[class*="grid"] {
+          max-width: 100% !important;
+          overflow: hidden !important;
+        }
+      }
+    </style>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
