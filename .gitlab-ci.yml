@@ -1,0 +1,33 @@
+# Archivo: .gitlab-ci.yml (Ubicado en la raíz del repositorio)
+stages:
+  - verify
+  - secure
+  - build
+
+image: python:3.10-slim
+
+# Análisis de calidad de código rápido y seguro
+code-quality:
+  stage: verify
+  script:
+    - pip install --no-cache-dir flake8
+    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+# Detección proactiva de secretos integrada en el pipeline
+secret-detection:
+  stage: secure
+  image: trufflesecurity/trufflehog:latest
+  script:
+    - trufflehog filesystem --directory . --fail
+
+# Empaquetado optimizado
+build-artifact:
+  stage: build
+  script:
+    - echo "Empaquetando artefactos de forma segura..."
+    - mkdir -p dist
+    - tar -czf dist/app-release.tar.gz --exclude='.git' .
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 7 days
