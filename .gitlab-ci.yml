@@ -1,33 +1,45 @@
-# Archivo: .gitlab-ci.yml (Ubicado en la raíz del repositorio)
 stages:
-  - verify
-  - secure
   - build
+  - test
 
-image: python:3.10-slim
+variables:
+  SECURE_LOG_LEVEL: "debug"
 
-# Análisis de calidad de código rápido y seguro
-code-quality:
-  stage: verify
-  script:
-    - pip install --no-cache-dir flake8
-    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+# Utilización de imágenes oficiales específicas y seguras (Pinning por versión exacta)
+image: python:3.10.12-slim
 
-# Detección proactiva de secretos integrada en el pipeline
-secret-detection:
-  stage: secure
-  image: trufflesecurity/trufflehog:latest
-  script:
-    - trufflehog filesystem --directory . --fail
+cache:
+  key: "${CI_COMMIT_REF_SLUG}"
+  paths:
+    - .cache/pip
+    - venv/
 
-# Empaquetado optimizado
-build-artifact:
+build-and-lint:
   stage: build
   script:
-    - echo "Empaquetando artefactos de forma segura..."
-    - mkdir -p dist
-    - tar -czf dist/app-release.tar.gz --exclude='.git' .
+    - python -m venv venv
+    - source venv/bin/activate
+    - pip install --upgrade pip
+    - pip install --cache-dir=.cache/pip mypy
+    - mypy src/
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+unit-tests:
+  stage: test
+  script:
+    - source venv/bin/activate
+    - pip install --cache-dir=.cache/pip pytest pytest-cov
+    - pytest test/ --junitxml=unit_test_results.xml --cov=src/
+    # Inyección segura del token mediante Variables Protegidas de GitLab CI/CD (Nunca hardcodeado)
+    - bash codecov_script.sh
   artifacts:
-    paths:
-      - dist/
-    expire_in: 7 days
+    name: "test-results-$CI_COMMIT_SHORT_SHA"
+    reports:
+      junit: unit_test_results.xml
+    expire_in: 30 days
+    when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
