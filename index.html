@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- ===================================================================
+         🛡 INYECCIÓN DEVSECOPS: ESCUDO CSP Y CABECERAS DE SEGURIDAD
+         =================================================================== -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com;">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <!-- ===================================================================
          RISKNET ENTERPRISE RESPONSIVE CORE SHIELD (OWASP & WPO COMPLIANT)
          =================================================================== -->
     <style id="risknet-core-responsive-engine">
@@ -153,7 +159,7 @@
     <script type="module" src="/src/main.tsx"></script>
 
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
     <script>
       tailwind.config = {
         theme: {
