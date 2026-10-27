@@ -6,139 +6,92 @@
    RISKNET SHIELD: MOTOR DE CONTENCIÓN ULTRA-ESTRICTO PARA MÓVILES
    =================================================================== */
 
-/* 1. Neutralización de desbordamiento horizontal global */
-html,
-body {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-  background-color: #030712 !important;
-  -webkit-text-size-adjust: 100% !important;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: inherit !important;
-}
-
-/* 2. REGLA MAESTRA PARA VECTORES SVG: Ningún SVG puede crecer sin control */
-svg,
-svg[class*="w-"],
-svg[class*="h-"],
-div > svg,
-span > svg {
-  max-width: 44px !important;
-  max-height: 44px !important;
-  width: auto;
-  height: auto;
-  display: inline-block !important;
-  vertical-align: middle !important;
-}
-
-/* 3. BLOQUEO ESPECÍFICO DE ÍCONOS EN BOTONES Y ENLACES (Hero y CTAs) */
-button svg,
-a svg,
-.btn svg,
-nav svg,
-header svg,
-[role="button"] svg,
-div:has(> a[href*="diagnostico"]) svg,
-div:has(> a[href*="vgrc"]) svg {
-  width: 20px !important;
-  height: 20px !important;
-  max-width: 20px !important;
-  max-height: 20px !important;
-  min-width: 20px !important;
-  min-height: 20px !important;
-  flex-shrink: 0 !important;
-  background: transparent !important;
-}
-
-/* 4. Logotipos y escudos en barra de navegación */
-header img,
-nav img,
-header svg,
-nav svg {
-  max-height: 38px !important;
-  width: auto !important;
-}
-
-/* 5. ADAPTACIÓN A PANTALLAS MÓVILES Y TABLETS (Viewport < 1024px) */
-@media screen and (max-width: 1024px) {
-  /* Apilado vertical forzado para botones de llamada a la acción */
-  div:has(> a[href*="diagnostico"]),
-  div:has(> a[href*="vgrc"]),
-  div:has(> button) {
-    display: flex !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    gap: 0.85rem !important;
-    margin-top: 1.5rem !important;
+@layer base {
+  /* 1. Neutralización de desbordamiento horizontal global */
+  html,
+  body {
+    @apply overflow-x-hidden w-full max-w-[100vw] m-0 p-0 box-border bg-gray-950;
+    -webkit-text-size-adjust: 100%;
   }
 
-  /* Botones adaptados al ancho completo táctil (WCAG 2.2 AAA) */
-  a[href*="diagnostico"],
-  a[href*="vgrc"],
-  button,
-  .btn {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 48px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 0.85rem 1.25rem !important;
-    box-sizing: border-box !important;
-    text-align: center !important;
+  *,
+  *::before,
+  *::after {
+    @apply box-inherit;
   }
 
-  /* Tipografía fluida para títulos principales */
+  /* 2. REGLA MAESTRA PARA VECTORES SVG */
+  svg,
+  div > svg,
+  span > svg {
+    @apply max-w-[44px] max-h-[44px] w-auto h-auto inline-block align-middle;
+  }
+
+  /* 4. Logotipos y escudos en barra de navegación */
+  header img,
+  nav img,
+  header svg,
+  nav svg {
+    @apply max-h-[38px] w-auto;
+  }
+
   h1 {
-    font-size: clamp(1.6rem, 6.5vw, 2.2rem) !important;
-    line-height: 1.25 !important;
-    margin-bottom: 1rem !important;
-    word-break: break-word !important;
+    font-size: clamp(1.6rem, 6.5vw, 2.2rem);
+    @apply leading-tight mb-4 break-words;
   }
 
   h2 {
-    font-size: clamp(1.3rem, 5vw, 1.65rem) !important;
-    line-height: 1.3 !important;
-    margin-bottom: 0.75rem !important;
+    font-size: clamp(1.3rem, 5vw, 1.65rem);
+    @apply leading-snug mb-3;
   }
 
   p {
-    font-size: 0.95rem !important;
-    line-height: 1.6 !important;
-    color: #94a3b8 !important;
+    @apply text-[0.95rem] leading-relaxed text-slate-400;
+  }
+}
+
+@layer components {
+  /* 3. BLOQUEO ESPECÍFICO DE ÍCONOS EN BOTONES Y ENLACES */
+  button svg,
+  a svg,
+  .btn svg,
+  [role="button"] svg {
+    @apply w-5 h-5 min-w-[20px] min-h-[20px] shrink-0 bg-transparent;
   }
 
-  /* Separadores y bordes de tarjetas Bento para evitar texto apelmazado */
-  section {
-    padding: 2.25rem 1rem !important;
-    border-bottom: 1px solid rgba(30, 41, 59, 0.7) !important;
-  }
+  /* 5. ADAPTACIÓN A PANTALLAS MÓVILES Y TABLETS (Viewport < 1024px) */
+  @media screen and (max-width: 1024px) {
+    /* Apilado vertical forzado para botones y tarjetas */
+    div:has(> a[href*="diagnostico"]),
+    div:has(> a[href*="vgrc"]),
+    div:has(> button) {
+      @apply flex flex-col w-full gap-[0.85rem] mt-6;
+    }
 
-  div[class*="border"],
-  div:has(> h3) {
-    border: 1px solid rgba(51, 65, 85, 0.5) !important;
-    border-radius: 0.5rem !important;
-    padding: 1.25rem !important;
-    margin-bottom: 1rem !important;
-    background: rgba(15, 23, 42, 0.6) !important;
-  }
+    a[href*="diagnostico"],
+    a[href*="vgrc"],
+    button,
+    .btn {
+      @apply w-full min-h-[48px] flex items-center justify-center py-[0.85rem] px-5 box-border text-center;
+    }
 
+    section {
+      @apply py-9 px-4 border-b border-slate-800/70;
+    }
+
+    div[class*="border"],
+    div:has(> h3) {
+      @apply border border-slate-700/50 rounded-lg p-5 mb-4 bg-slate-900/60;
+    }
+  }
+}
+
+@layer utilities {
   /* Contención de tablas y gráficos de radar */
+  .radar-container,
   table,
-  div:has(> table),
-  [class*="telemetry"],
-  [class*="radar"] {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
+  div:has(> table) {
+    @apply w-full max-w-full overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
